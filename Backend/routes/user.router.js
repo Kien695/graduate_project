@@ -1,0 +1,10 @@
+const express = require("express");
+const controller = require("../controller/user.controller");
+const { auth, authorize } = require("../middleware/auth.middleware");
+const router = express.Router();
+router.use(auth);
+router.get("/me", controller.getMe);
+router.put("/me", controller.updateMe);
+router.patch("/:id/security-level", authorize("admin"), controller.updateSecurityLevel);
+router.patch("/:id/lock", authorize("admin"), controller.lock);
+module.exports = router;

@@ -1,0 +1,1 @@
+import InspectionManager from"../../components/inspection/InspectionManager";import PageHeader from"../../components/common/PageHeader";export default function InspectionPage(){return <><PageHeader title="Kiểm định xe" description="Quản lý phiếu và hình ảnh kiểm định"/><InspectionManager/></>}

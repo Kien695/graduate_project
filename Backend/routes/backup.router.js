@@ -1,0 +1,10 @@
+const express = require("express");
+const c = require("../controller/backup.controller");
+const { auth, authorize } = require("../middleware/auth.middleware");
+const r = express.Router();
+r.use(auth, authorize("admin"));
+r.get("/", c.list);
+r.post("/", c.create);
+r.get("/:id", c.get);
+r.post("/:id/restore", c.restore);
+module.exports = r;

@@ -1,0 +1,14 @@
+const express = require("express");
+const c = require("../controller/order.controller");
+const { auth, authorize } = require("../middleware/auth.middleware");
+const r = express.Router();
+r.use(auth);
+r.get("/my-orders", c.list);
+r.post("/", c.create);
+r.get("/", authorize("admin", "manager", "staff"), c.list);
+r.get("/:id", c.get);
+r.put("/:id", authorize("admin", "manager", "staff"), c.update);
+r.post("/:id/confirm", authorize("admin", "manager", "staff"), c.confirm);
+r.post("/:id/cancel", c.cancel);
+r.post("/:id/complete", authorize("admin", "manager", "staff"), c.complete);
+module.exports = r;

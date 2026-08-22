@@ -1,0 +1,11 @@
+const express = require("express");
+const c = require("../controller/monitoring.controller");
+const { auth, authorize } = require("../middleware/auth.middleware");
+const r = express.Router();
+r.use(auth, authorize("admin", "manager"));
+r.get("/server/status", c.status);
+r.get("/server/cpu", c.cpu);
+r.get("/server/memory", c.memory);
+r.get("/server/load", c.load);
+r.post("/alerts/config", authorize("admin"), c.configure);
+module.exports = r;

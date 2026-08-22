@@ -1,0 +1,7 @@
+const os=require("os");const {database}=require("../database/database");
+const memory=()=>{const total=os.totalmem(),free=os.freemem();return {totalBytes:total,freeBytes:free,usedBytes:total-free,usagePercent:Number((((total-free)/total)*100).toFixed(2))};};
+const cpu=()=>{const cpus=os.cpus();let idle=0,total=0;for(const c of cpus){idle+=c.times.idle;total+=Object.values(c.times).reduce((a,b)=>a+b,0);}return {cores:cpus.length,usagePercent:Number(((1-idle/total)*100).toFixed(2))};};
+const load=()=>({loadAverage:os.loadavg(),uptimeSeconds:os.uptime()});
+const status=()=>({status:"ok",hostname:os.hostname(),platform:os.platform(),nodeVersion:process.version,processUptimeSeconds:process.uptime(),cpu:cpu(),memory:memory(),load:load()});
+const configure=async(input,userId)=>{const existing=await database.query("SELECT id FROM monitoring_alert_configs ORDER BY id LIMIT 1");const vals=[Number(input.cpuThreshold),Number(input.memoryThreshold),Number(input.loadThreshold),userId];const {rows}=existing.rows[0]?await database.query("UPDATE monitoring_alert_configs SET cpu_threshold=$1,memory_threshold=$2,load_threshold=$3,updated_by=$4,updated_at=NOW() WHERE id=$5 RETURNING *",[...vals,existing.rows[0].id]):await database.query("INSERT INTO monitoring_alert_configs(cpu_threshold,memory_threshold,load_threshold,updated_by) VALUES($1,$2,$3,$4) RETURNING *",vals);return rows[0];};
+module.exports={memory,cpu,load,status,configure};

@@ -1,0 +1,1 @@
+import DashboardOverview from"../../components/dashboard/DashboardOverview";import PageHeader from"../../components/common/PageHeader";export default function DashboardPage(){return <><PageHeader title="Trang chủ" description="Tổng quan hoạt động kinh doanh hôm nay"/><DashboardOverview/></>}

@@ -1,0 +1,14 @@
+const express = require("express");
+const c = require("../controller/inspection.controller");
+const { auth, authorize } = require("../middleware/auth.middleware");
+const { upload } = require("../middleware/upload.middleware");
+const r = express.Router();
+r.use(auth, authorize("admin", "manager", "staff"));
+r.get("/", c.list);
+r.post("/", c.create);
+r.get("/:id", c.get);
+r.put("/:id", c.update);
+r.post("/:id/pass", c.pass);
+r.post("/:id/fail", c.fail);
+r.post("/:id/images", upload.array("images", 10), c.images);
+module.exports = r;

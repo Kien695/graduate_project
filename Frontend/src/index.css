@@ -1,0 +1,24 @@
+@import url("https://fonts.googleapis.com/css2?family=Montserrat:ital,wght@0,100..900;1,100..900&family=Raleway:ital,wght@0,100..900;1,100..900&family=Roboto:ital,wght@0,100..900;1,100..900&display=swap");
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+@layer base {
+  * { box-sizing: border-box; }
+  html { font-family: "Montserrat", sans-serif; background: #f8fafc; }
+  body { margin: 0; min-width: 320px; min-height: 100vh; }
+  button, input, select, textarea { font: inherit; }
+  button { cursor: pointer; }
+}
+
+@layer components {
+  .form-control { @apply w-full rounded-xl border border-slate-200 bg-white px-3.5 py-3 text-sm text-slate-800 outline-none transition focus:border-blue-500 focus:ring-4 focus:ring-blue-50; }
+  .table-head { @apply bg-slate-50 text-[11px] uppercase tracking-wider text-slate-500; }
+  .table-head th { @apply px-5 py-4 font-bold; }
+  .table-body { @apply divide-y divide-slate-100 text-slate-600; }
+  .table-body td { @apply px-5 py-4; }
+  .table-body tr { @apply transition hover:bg-slate-50/80; }
+  .action-blue { @apply whitespace-nowrap rounded-lg bg-blue-50 px-2.5 py-1.5 font-bold text-blue-700 hover:bg-blue-100 disabled:opacity-50; }
+  .action-green { @apply whitespace-nowrap rounded-lg bg-emerald-50 px-2.5 py-1.5 font-bold text-emerald-700 hover:bg-emerald-100 disabled:opacity-50; }
+  .action-red { @apply whitespace-nowrap rounded-lg bg-rose-50 px-2.5 py-1.5 font-bold text-rose-700 hover:bg-rose-100 disabled:opacity-50; }
+}

@@ -1,0 +1,33 @@
+{
+  "name": "backend",
+  "version": "1.0.0",
+  "main": "index.js",
+  "scripts": {
+    "dev": "nodemon --inspect index.js",
+    "start": "node index.js",
+    "db:migrate": "node database/migrate.js",
+    "db:validate": "node database/validateSchema.js",
+    "db:inspect": "node database/inspectSchema.js",
+    "db:create-admin": "node database/createAdmin.js",
+    "check": "node scripts/check.js",
+    "test:e2e": "node scripts/e2e.js",
+    "test": "echo \"Error: no test specified\" && exit 1"
+  },
+  "author": "",
+  "license": "ISC",
+  "description": "",
+  "dependencies": {
+    "cloudinary": "^2.10.1",
+    "cookie-parser": "^1.4.7",
+    "cors": "^2.8.6",
+    "dotenv": "^17.4.2",
+    "express": "^5.2.1",
+    "jsonwebtoken": "^9.0.3",
+    "multer": "^2.2.0",
+    "pg": "^8.23.0",
+    "streamifier": "^0.1.1"
+  },
+  "devDependencies": {
+    "nodemon": "^3.1.14"
+  }
+}
