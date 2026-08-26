@@ -2,6 +2,24 @@ const crud = require("../service/crud.service");
 const audit = require("../service/auditLog.service");
 const { catchAsyncError } = require("../middleware/catchAsyncError");
 const { successResponse } = require("../utils/response");
+const uploader = require("../service/upload.service");
+
+const imageConfig = {
+  vehicles: { folder: "auto-dealer/vehicles" },
+  accessories: { folder: "auto-dealer/accessories" },
+};
+const parseImages = (images) => {
+  if (Array.isArray(images)) return images;
+  if (typeof images !== "string") return [];
+  try {
+    const parsed = JSON.parse(images);
+    return Array.isArray(parsed) ? parsed : [];
+  } catch {
+    return [];
+  }
+};
+const uploadRequestImages = (table, files) =>
+  uploader.uploadMany(files, imageConfig[table]?.folder);
 
 const makeCrudController = (table) => ({
   list: catchAsyncError(async (req, res) =>
@@ -21,7 +39,17 @@ const makeCrudController = (table) => ({
     ),
   ),
   create: catchAsyncError(async (req, res) => {
-    const data = await crud.create(table, req.body);
+    const uploaded = await uploadRequestImages(table, req.files || []);
+    let data;
+    try {
+      data = await crud.create(table, {
+        ...req.body,
+        ...(uploaded.length ? { images: JSON.stringify(uploaded) } : {}),
+      });
+    } catch (error) {
+      await Promise.allSettled([uploader.destroyImages(uploaded)]);
+      throw error;
+    }
     await audit.record(null, {
       userId: req.user?.id,
       action: "CREATE",
@@ -34,7 +62,18 @@ const makeCrudController = (table) => ({
   }),
   update: catchAsyncError(async (req, res) => {
     const old = await crud.get(table, req.params.id);
-    const data = await crud.update(table, req.params.id, req.body);
+    const uploaded = await uploadRequestImages(table, req.files || []);
+    let data;
+    try {
+      const images = [...parseImages(old.images), ...uploaded];
+      data = await crud.update(table, req.params.id, {
+        ...req.body,
+        ...(uploaded.length ? { images: JSON.stringify(images) } : {}),
+      });
+    } catch (error) {
+      await Promise.allSettled([uploader.destroyImages(uploaded)]);
+      throw error;
+    }
     await audit.record(null, {
       userId: req.user?.id,
       action: "UPDATE",
@@ -48,6 +87,7 @@ const makeCrudController = (table) => ({
   }),
   remove: catchAsyncError(async (req, res) => {
     const old = await crud.get(table, req.params.id);
+    if (imageConfig[table]) await uploader.destroyImages(parseImages(old.images));
     const data = await crud.remove(table, req.params.id);
     await audit.record(null, {
       userId: req.user?.id,

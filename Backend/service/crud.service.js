@@ -23,9 +23,10 @@ const configs = {
       "price",
       "status",
       "description",
+      "images",
     ],
   },
-  accessories: { fields: ["name", "sku", "price", "stock", "is_active"] },
+  accessories: { fields: ["name", "sku", "price", "stock", "is_active", "images"] },
 };
 const config = (table) =>
   configs[table] ||
@@ -104,7 +105,7 @@ const update = async (table, id, input) => {
 };
 const remove = async (table, id) => {
   config(table);
-  const soft = ["customers", "accessories"].includes(table);
+  const soft = ["customers"].includes(table);
   const sql = soft
     ? `UPDATE ${table} SET is_active=FALSE,updated_at=NOW() WHERE id=$1 RETURNING id`
     : `DELETE FROM ${table} WHERE id=$1 RETURNING id`;

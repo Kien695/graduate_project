@@ -1,8 +1,68 @@
-const {database,withTransaction}=require("../database/database");const {ErrorHandler}=require("../middleware/errorMiddleware");const audit=require("./auditLog.service");const uploader=require("./upload.service");
-const list=async()=>{const {rows}=await database.query("SELECT i.*,v.vin,v.brand,v.model FROM inspections i JOIN vehicles v ON v.id=i.vehicle_id ORDER BY i.created_at DESC");return rows;};
-const get=async id=>{const {rows}=await database.query("SELECT i.*,COALESCE(json_agg(ii) FILTER(WHERE ii.id IS NOT NULL),'[]') images FROM inspections i LEFT JOIN inspection_images ii ON ii.inspection_id=i.id WHERE i.id=$1 GROUP BY i.id",[id]);if(!rows[0])throw new ErrorHandler("Không tìm thấy phiếu kiểm định",404);return rows[0];};
-const create=async(input,user)=>{const {rows}=await database.query("INSERT INTO inspections(vehicle_id,inspector_id,notes) VALUES($1,$2,$3) RETURNING *",[input.vehicle_id,user.id,input.notes||null]);return rows[0];};
-const update=async(id,input)=>{const {rows}=await database.query("UPDATE inspections SET notes=COALESCE($2,notes),updated_at=NOW() WHERE id=$1 RETURNING *",[id,input.notes||null]);if(!rows[0])throw new ErrorHandler("Không tìm thấy phiếu kiểm định",404);return rows[0];};
-const setStatus=(id,status,user,ip)=>withTransaction(async c=>{const {rows}=await c.query("UPDATE inspections SET status=$2,inspected_at=NOW(),updated_at=NOW() WHERE id=$1 AND status='pending' RETURNING *",[id,status]);if(!rows[0])throw new ErrorHandler("Phiếu không tồn tại hoặc đã có kết quả",409);await audit.record(c,{userId:user.id,action:status.toUpperCase(),entityType:"inspection",entityId:id,newValues:rows[0],ipAddress:ip});return rows[0];});
-const addImages=async(id,files)=>{if(!files?.length)throw new ErrorHandler("Chưa chọn ảnh",400);await get(id);const uploaded=await Promise.all(files.map(f=>uploader.uploadBuffer(f)));const saved=[];for(const image of uploaded){const {rows}=await database.query("INSERT INTO inspection_images(inspection_id,url,public_id) VALUES($1,$2,$3) RETURNING *",[id,image.url,image.public_id]);saved.push(rows[0]);}return saved;};
-module.exports={list,get,create,update,setStatus,addImages};
+const { database, withTransaction } = require("../database/database");
+const { ErrorHandler } = require("../middleware/errorMiddleware");
+const audit = require("./auditLog.service");
+const uploader = require("./upload.service");
+const list = async () => {
+  const { rows } = await database.query(
+    "SELECT i.*,v.vin,v.brand,v.model FROM inspections i JOIN vehicles v ON v.id=i.vehicle_id ORDER BY i.created_at DESC",
+  );
+  return rows;
+};
+const get = async (id) => {
+  const { rows } = await database.query(
+    "SELECT i.*,COALESCE(json_agg(ii) FILTER(WHERE ii.id IS NOT NULL),'[]') images FROM inspections i LEFT JOIN inspection_images ii ON ii.inspection_id=i.id WHERE i.id=$1 GROUP BY i.id",
+    [id],
+  );
+  if (!rows[0]) throw new ErrorHandler("Không tìm thấy phiếu kiểm định", 404);
+  return rows[0];
+};
+const create = async (input, user) => {
+  const { rows } = await database.query(
+    "INSERT INTO inspections(vehicle_id,inspector_id,notes) VALUES($1,$2,$3) RETURNING *",
+    [input.vehicle_id, user.id, input.notes || null],
+  );
+  return rows[0];
+};
+const update = async (id, input) => {
+  const { rows } = await database.query(
+    "UPDATE inspections SET notes=COALESCE($2,notes),updated_at=NOW() WHERE id=$1 RETURNING *",
+    [id, input.notes || null],
+  );
+  if (!rows[0]) throw new ErrorHandler("Không tìm thấy phiếu kiểm định", 404);
+  return rows[0];
+};
+const setStatus = (id, status, user, ip) =>
+  withTransaction(async (c) => {
+    const { rows } = await c.query(
+      "UPDATE inspections SET status=$2,inspected_at=NOW(),updated_at=NOW() WHERE id=$1 AND status='pending' RETURNING *",
+      [id, status],
+    );
+    if (!rows[0])
+      throw new ErrorHandler("Phiếu không tồn tại hoặc đã có kết quả", 409);
+    await audit.record(c, {
+      userId: user.id,
+      action: status.toUpperCase(),
+      entityType: "inspection",
+      entityId: id,
+      newValues: rows[0],
+      ipAddress: ip,
+    });
+    return rows[0];
+  });
+const addImages = async (id, files) => {
+  if (!files?.length) throw new ErrorHandler("Chưa chọn ảnh", 400);
+  await get(id);
+  const uploaded = await Promise.all(
+    files.map((f) => uploader.uploadBuffer(f)),
+  );
+  const saved = [];
+  for (const image of uploaded) {
+    const { rows } = await database.query(
+      "INSERT INTO inspection_images(inspection_id,url,public_id) VALUES($1,$2,$3) RETURNING *",
+      [id, image.url, image.public_id],
+    );
+    saved.push(rows[0]);
+  }
+  return saved;
+};
+module.exports = { list, get, create, update, setStatus, addImages };
