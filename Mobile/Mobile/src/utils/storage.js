@@ -18,6 +18,7 @@ export const storage = {
       await SecureStore.setItemAsync(key, value);
     } catch (e) {
       console.warn('storage.set error:', key, e);
+      throw e;
     }
   },
 

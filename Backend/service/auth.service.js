@@ -7,6 +7,41 @@ const { generateAccessToken } = require("../utils/generatAccessToken");
 const { generateRefreshToken } = require("../utils/generateRefreshToken");
 const MAX_FAILURES = Number(process.env.MAX_FAILED_LOGIN_ATTEMPTS || 5);
 
+const registerCustomer = async (input) => {
+  try {
+    return await withTransaction(async (client) => {
+      const existing = await client.query(
+        "SELECT id FROM users WHERE LOWER(email)=LOWER($1) LIMIT 1",
+        [input.email],
+      );
+      if (existing.rows[0])
+        throw new ErrorHandler(
+          "Email đã tồn tại",
+          409,
+          [{ field: "email", message: "Email này đã được sử dụng" }],
+        );
+
+      const passwordHash = await hashPassword(input.password);
+      const { rows } = await client.query(
+        "INSERT INTO users(username,password_hash,role,email,phone,full_name,status,is_active,is_locked,failed_login_attempts) VALUES($1,$2,'CUSTOMER',$3,$4,$5,'ACTIVE',TRUE,FALSE,0) RETURNING id",
+        [input.email, passwordHash, input.email, input.phone, input.name],
+      );
+      await client.query(
+        "INSERT INTO customers(user_id,full_name,email,phone,is_active) VALUES($1,$2,$3,$4,TRUE)",
+        [rows[0].id, input.name, input.email, input.phone],
+      );
+    });
+  } catch (error) {
+    if (error.code === "23505")
+      throw new ErrorHandler(
+        "Email đã tồn tại",
+        409,
+        [{ field: "email", message: "Email này đã được sử dụng" }],
+      );
+    throw error;
+  }
+};
+
 const login = (input) =>
   withTransaction(async (client) => {
     const result = await client.query(
@@ -127,4 +162,4 @@ const setLock = async (userId, locked) => {
   if (locked) await logoutAll(userId);
   return rows[0];
 };
-module.exports = { login, refresh, logout, logoutAll, changePassword, setLock };
+module.exports = { registerCustomer, login, refresh, logout, logoutAll, changePassword, setLock };

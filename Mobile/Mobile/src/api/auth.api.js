@@ -13,3 +13,8 @@ export const logoutRequest = async (refreshToken) => {
   const res = await client.post('/auth/logout', { refreshToken });
   return res.data;
 };
+
+export const registerCustomer = async (payload) => {
+  const res = await client.post('/auth/register/customer', payload);
+  return res.data;
+};

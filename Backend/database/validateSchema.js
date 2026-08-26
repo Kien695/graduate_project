@@ -18,7 +18,7 @@ const validate = async () => {
       "SELECT id,customer_id,vehicle_id,total_amount,note,created_by,status,updated_at FROM orders LIMIT 0",
       "SELECT id,order_id,contract_number,terms,security_level_id,approved_by,approved_at,signed_at,updated_at FROM contracts LIMIT 0",
       "SELECT id,contract_id,amount,method,reference,paid_at,created_by FROM payments LIMIT 0",
-      "SELECT id,vehicle_id,inspector_id,status,notes,inspected_at,updated_at FROM inspections LIMIT 0",
+      "SELECT id,vehicle_id,order_id,inspector_id,status,checklist,notes,inspected_at,updated_at FROM inspections LIMIT 0",
       "SELECT id,inspection_id,url,public_id,created_at FROM inspection_images LIMIT 0",
       "SELECT id,user_id,action,entity_type,entity_id,old_values,new_values,ip_address FROM audit_logs LIMIT 0",
       "SELECT id,file_name,file_path,status,size_bytes,created_by FROM backup_records LIMIT 0",

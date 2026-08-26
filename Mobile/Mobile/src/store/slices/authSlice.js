@@ -22,6 +22,9 @@ export const login = createAsyncThunk(
       await storage.set(STORAGE_KEYS.ACCESS_TOKEN, data.accessToken);
       await storage.set(STORAGE_KEYS.REFRESH_TOKEN, data.refreshToken);
       await storage.setObject(STORAGE_KEYS.CURRENT_USER, data.user);
+      if (!(await storage.get(STORAGE_KEYS.ACCESS_TOKEN))) {
+        throw new Error('Không thể lưu phiên đăng nhập trên thiết bị');
+      }
 
       return data.user;
     } catch (error) {

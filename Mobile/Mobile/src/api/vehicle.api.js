@@ -1,8 +1,13 @@
-// src/api/vehicle.api.js
-import client from "./client";
+import client from './client';
 
-// Chỉ lấy xe đang khả dụng (status = available) — khớp endpoint public của backend
-export const getAvailableVehicles = async () => {
-  const res = await client.get("/vehicles/available");
-  return res.data.data.items;
+export const getVehicles = async () => {
+  const res = await client.get('/vehicles');
+  return res.data.data;
 };
+
+export const getVehicleById = async (id) => {
+  const res = await client.get(`/vehicles/${id}`);
+  return res.data.data;
+};
+
+export const getAvailableVehicles = getVehicles;

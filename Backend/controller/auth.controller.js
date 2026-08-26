@@ -27,6 +27,39 @@ const login = catchAsyncError(async (req, res) => {
   });
   return successResponse(res, 200, "Đăng nhập thành công", data);
 });
+const registerCustomer = catchAsyncError(async (req, res) => {
+  const { name, email, phone, password, confirmPassword } = req.body;
+  const errors = [];
+  const addError = (field, message) => errors.push({ field, message });
+
+  if (!String(name || "").trim())
+    addError("name", "Họ và tên không được để trống");
+  if (!String(email || "").trim())
+    addError("email", "Email không được để trống");
+  else if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(String(email).trim()))
+    addError("email", "Email không đúng định dạng");
+  if (!String(phone || "").trim())
+    addError("phone", "Số điện thoại không được để trống");
+  else if (!/^(0\d{9}|\+84\d{9})$/.test(String(phone).trim()))
+    addError("phone", "Số điện thoại không hợp lệ");
+  if (!password) addError("password", "Mật khẩu không được để trống");
+  else if (String(password).length < 6)
+    addError("password", "Mật khẩu phải có ít nhất 6 ký tự");
+  if (!confirmPassword)
+    addError("confirmPassword", "Vui lòng nhập lại mật khẩu");
+  else if (password !== confirmPassword)
+    addError("confirmPassword", "Mật khẩu nhập lại không khớp");
+
+  if (errors.length)
+    throw new ErrorHandler("Dữ liệu đăng ký không hợp lệ", 400, errors);
+  await authService.registerCustomer({
+    name: String(name).trim(),
+    email: String(email).trim().toLowerCase(),
+    phone: String(phone).trim(),
+    password,
+  });
+  return successResponse(res, 201, "Register successfully");
+});
 const refreshToken = catchAsyncError(async (req, res) => {
   const token = req.body.refreshToken || req.cookies?.refreshToken;
   if (!token) throw new ErrorHandler("Thiếu refresh token", 400);
@@ -81,6 +114,7 @@ const unlockAccount = catchAsyncError(async (req, res) =>
 );
 module.exports = {
   login,
+  registerCustomer,
   refreshToken,
   logout,
   logoutAll,

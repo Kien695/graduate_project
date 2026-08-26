@@ -167,6 +167,9 @@ CREATE TABLE vehicles (
     )),
 
 
+    images JSONB DEFAULT '[]'::jsonb,
+
+
     created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
 
 );
@@ -189,7 +192,10 @@ CREATE TABLE accessories (
     quantity INT DEFAULT 0,
 
 
-    price NUMERIC(15,2)
+    price NUMERIC(15,2),
+
+
+    images JSONB DEFAULT '[]'::jsonb
 
 );
 
@@ -209,6 +215,8 @@ CREATE TABLE orders (
 
 
     vehicle_id INT,
+
+    order_id INT,
 
 
     order_date TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
@@ -339,6 +347,17 @@ CREATE TABLE inspections (
 
     inspector_id INT,
 
+    status VARCHAR(20) DEFAULT 'pending'
+    CHECK(status IN
+    (
+        'pending',
+        'checking',
+        'passed',
+        'failed'
+    )),
+
+    checklist JSONB DEFAULT '[]'::jsonb,
+
 
     result VARCHAR(20)
     CHECK(result IN
@@ -357,6 +376,10 @@ CREATE TABLE inspections (
 
     FOREIGN KEY(vehicle_id)
     REFERENCES vehicles(id),
+
+
+    FOREIGN KEY(order_id)
+    REFERENCES orders(id),
 
 
     FOREIGN KEY(contract_id)
