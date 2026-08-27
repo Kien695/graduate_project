@@ -97,10 +97,12 @@ const cleanup = async () => {
       );
       await client.query("DELETE FROM vehicles WHERE id=$1", [ids.vehicle]);
     }
-    if (ids.backup)
+    if (ids.backup) {
+      await client.query("DELETE FROM backup_history WHERE backup_record_id=$1", [ids.backup]);
       await client.query("DELETE FROM backup_records WHERE id=$1", [
         ids.backup,
       ]);
+    }
     await client.query(
       "DELETE FROM user_sessions WHERE device_id LIKE 'e2e-%'",
     );

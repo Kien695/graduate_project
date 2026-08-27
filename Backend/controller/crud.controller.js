@@ -3,6 +3,7 @@ const audit = require("../service/auditLog.service");
 const { catchAsyncError } = require("../middleware/catchAsyncError");
 const { successResponse } = require("../utils/response");
 const uploader = require("../service/upload.service");
+const storageQuota = require("../service/storageQuota.service");
 
 const imageConfig = {
   vehicles: { folder: "auto-dealer/vehicles" },
@@ -46,15 +47,24 @@ const makeCrudController = (table) => ({
     ),
   ),
   create: catchAsyncError(async (req, res) => {
-    const uploaded = await uploadRequestImages(table, req.files || []);
+    const files = req.files || [];
+    const reservation = await storageQuota.reserveForUser(
+      req.user,
+      files.reduce((total, file) => total + Number(file.size || 0), 0),
+    );
+    let uploaded = [];
     let data;
     try {
+      uploaded = storageQuota.tagImages(await uploadRequestImages(table, files), reservation);
       data = await crud.create(table, {
         ...req.body,
         ...(uploaded.length ? { images: JSON.stringify(uploaded) } : {}),
       });
     } catch (error) {
-      await Promise.allSettled([uploader.destroyImages(uploaded)]);
+      await Promise.allSettled([
+        uploader.destroyImages(uploaded),
+        storageQuota.releaseReservation(reservation),
+      ]);
       throw error;
     }
     await audit.record(null, {
@@ -69,16 +79,25 @@ const makeCrudController = (table) => ({
   }),
   update: catchAsyncError(async (req, res) => {
     const old = await crud.get(table, req.params.id);
-    const uploaded = await uploadRequestImages(table, req.files || []);
+    const files = req.files || [];
+    const reservation = await storageQuota.reserveForUser(
+      req.user,
+      files.reduce((total, file) => total + Number(file.size || 0), 0),
+    );
+    let uploaded = [];
     let data;
     try {
+      uploaded = storageQuota.tagImages(await uploadRequestImages(table, files), reservation);
       const images = [...parseImages(old.images), ...uploaded];
       data = await crud.update(table, req.params.id, {
         ...req.body,
         ...(uploaded.length ? { images: JSON.stringify(images) } : {}),
       });
     } catch (error) {
-      await Promise.allSettled([uploader.destroyImages(uploaded)]);
+      await Promise.allSettled([
+        uploader.destroyImages(uploaded),
+        storageQuota.releaseReservation(reservation),
+      ]);
       throw error;
     }
     await audit.record(null, {
@@ -96,6 +115,7 @@ const makeCrudController = (table) => ({
     const old = await crud.get(table, req.params.id);
     if (imageConfig[table]) await uploader.destroyImages(parseImages(old.images));
     const data = await crud.remove(table, req.params.id);
+    if (imageConfig[table]) await storageQuota.releaseImages(parseImages(old.images));
     await audit.record(null, {
       userId: req.user?.id,
       action: "DELETE",
@@ -105,6 +125,31 @@ const makeCrudController = (table) => ({
       ipAddress: req.ip,
     });
     return successResponse(res, 200, "Xóa dữ liệu thành công", data);
+  }),
+  removeImage: catchAsyncError(async (req, res) => {
+    if (!imageConfig[table]) throw new Error("Resource khong ho tro hinh anh");
+    const old = await crud.get(table, req.params.id);
+    const images = parseImages(old.images);
+    const image = images.find((item) => item.public_id === req.body.public_id);
+    if (!image) {
+      const { ErrorHandler } = require("../middleware/errorMiddleware");
+      throw new ErrorHandler("Không tìm thấy ảnh", 404);
+    }
+    await uploader.destroyImage(image.public_id);
+    const data = await crud.update(table, req.params.id, {
+      images: JSON.stringify(images.filter((item) => item.public_id !== image.public_id)),
+    });
+    await storageQuota.releaseImages([image]);
+    await audit.record(null, {
+      userId: req.user?.id,
+      action: "DELETE_IMAGE",
+      entityType: table,
+      entityId: req.params.id,
+      oldValues: { image },
+      newValues: { imageCount: images.length - 1 },
+      ipAddress: req.ip,
+    });
+    return successResponse(res, 200, "Xóa ảnh thành công", data);
   }),
 });
 module.exports = { makeCrudController };

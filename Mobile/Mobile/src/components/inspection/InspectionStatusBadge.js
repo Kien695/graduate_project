@@ -3,10 +3,10 @@ import { COLORS } from '../../utils/theme';
 
 const config = {
   NOT_STARTED: { label: 'Chưa kiểm định', color: COLORS.muted, background: COLORS.surfaceRaised },
-  PENDING: { label: 'Đang chờ kiểm định', color: '#F3B24C', background: '#332715' },
-  CHECKING: { label: 'Đang kiểm định', color: '#78A9FF', background: '#172844' },
-  PASS: { label: 'Đã đạt', color: '#4CC9A0', background: '#123027' },
-  FAIL: { label: 'Không đạt', color: '#FF716C', background: '#35191B' },
+  PENDING: { label: 'Đang chờ kiểm định', color: '#B7791F', background: '#FFF8E6' },
+  CHECKING: { label: 'Đang kiểm định', color: '#2B6CB0', background: '#EBF4FF' },
+  PASS: { label: 'Đã đạt', color: '#16805B', background: '#EAF8F2' },
+  FAIL: { label: 'Không đạt', color: '#C53030', background: '#FFF0F0' },
 };
 export default function InspectionStatusBadge({ status }) {
   const value = config[String(status || '').toUpperCase()] || config.NOT_STARTED;

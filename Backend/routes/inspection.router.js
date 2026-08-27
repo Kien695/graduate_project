@@ -13,4 +13,5 @@ r.put("/:id/checklist", c.checklist);
 r.post("/:id/pass", c.pass);
 r.post("/:id/fail", c.fail);
 r.post("/:id/images", upload.array("images", 10), c.images);
+r.delete("/:id/images/:imageId", c.removeImage);
 module.exports = r;

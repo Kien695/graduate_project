@@ -78,7 +78,7 @@ const styles = StyleSheet.create({
   customerRow: { minHeight: 58, flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', borderBottomWidth: 1, borderBottomColor: COLORS.border },
   last: { borderBottomWidth: 0 }, labelWrap: { flexDirection: 'row', alignItems: 'center' }, label: { color: COLORS.muted, fontSize: 13, marginLeft: 9 },
   value: { color: COLORS.text, fontSize: 13, fontWeight: '700', maxWidth: '56%', textAlign: 'right' }, error: { color: COLORS.price, fontSize: 13, lineHeight: 19, marginTop: 14 },
-  notice: { flexDirection: 'row', backgroundColor: '#2D2516', borderWidth: 1, borderColor: '#4A3A1C', borderRadius: 14, padding: 14, marginTop: 18 },
-  noticeText: { flex: 1, color: '#D8C28E', fontSize: 12.5, lineHeight: 19, marginLeft: 9 },
+  notice: { flexDirection: 'row', backgroundColor: '#FFF8E6', borderWidth: 1, borderColor: '#F4D38A', borderRadius: 14, padding: 14, marginTop: 18 },
+  noticeText: { flex: 1, color: '#7A5A12', fontSize: 12.5, lineHeight: 19, marginLeft: 9 },
   footer: { paddingHorizontal: 16, paddingTop: 12, paddingBottom: 14, backgroundColor: COLORS.surface, borderTopWidth: 1, borderTopColor: COLORS.border },
 });

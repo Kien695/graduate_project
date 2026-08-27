@@ -7,5 +7,7 @@ r.get("/server/status", c.status);
 r.get("/server/cpu", c.cpu);
 r.get("/server/memory", c.memory);
 r.get("/server/load", c.load);
+r.get("/metrics", c.metrics);
+r.get("/alerts", c.alerts);
 r.post("/alerts/config", authorize("admin"), c.configure);
 module.exports = r;

@@ -8,5 +8,6 @@ export const {
   createOne: createAccessory,
   updateOne: updateAccessory,
   deleteOne: deleteAccessory,
+  deleteImage: deleteAccessoryImage,
 } = entity.thunks;
 export default entity.reducer;

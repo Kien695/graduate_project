@@ -7,7 +7,8 @@ const c = makeCrudController("accessories"),
 r.get("/", c.list);
 r.get("/:id", c.get);
 r.use(auth, authorize("admin", "manager", "staff"));
-r.post("/", upload.array("images", 1), c.create);
-r.put("/:id", upload.array("images", 1), c.update);
+r.post("/", upload.array("images", 10), c.create);
+r.put("/:id", upload.array("images", 10), c.update);
+r.delete("/:id/images", c.removeImage);
 r.delete("/:id", authorize("admin", "manager"), c.remove);
 module.exports = r;

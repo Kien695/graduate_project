@@ -79,7 +79,7 @@ export default function RegisterCustomerScreen({ navigation }) {
 
         {serverError ? <Text style={authStyles.error}>{serverError}</Text> : null}
         <TouchableOpacity style={[authStyles.button, loading && authStyles.buttonDisabled]} onPress={handleRegister} disabled={loading}>
-          {loading ? <ActivityIndicator color="#12151C" /> : <Text style={authStyles.buttonText}>Đăng ký</Text>}
+          {loading ? <ActivityIndicator color="#FFFFFF" /> : <Text style={authStyles.buttonText}>Đăng ký</Text>}
         </TouchableOpacity>
         <TouchableOpacity style={authStyles.bottomRow} onPress={() => navigation.goBack()}>
           <Text style={authStyles.bottomText}>Đã có tài khoản? </Text>

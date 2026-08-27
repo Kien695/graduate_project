@@ -1,5 +1,6 @@
 const { database, withTransaction } = require("../database/database");
 const { ErrorHandler } = require("../middleware/errorMiddleware");
+const notification = require('./notification.service');
 const list = async (user) => {
   const own = user.role === "customer";
   const { rows } = await database.query(
@@ -80,6 +81,11 @@ const transition = (id, status, user) =>
       "INSERT INTO audit_logs(user_id,action,entity_type,entity_id,new_values) VALUES($1,$2,'order',$3,$4)",
       [user.id, status, id, JSON.stringify({ status })],
     );
+    if (user.role !== 'customer') await notification.createForCustomer(c, o.rows[0].customer_id, {
+      title: 'Đơn hàng đã được cập nhật',
+      message: `Đơn hàng #${id} đã chuyển sang trạng thái ${status}.`,
+      type: 'ORDER', referenceId: Number(id),
+    });
     return rows[0];
   });
 const update = async (id, input) => {

@@ -1,7 +1,7 @@
 const jwt = require("jsonwebtoken");
-const { database } = require("../database/database");
 const { ErrorHandler } = require("./errorMiddleware");
 const { catchAsyncError } = require("./catchAsyncError");
+const sessionActivity = require("../service/sessionActivity.service");
 
 const auth = catchAsyncError(async (req, res, next) => {
   const token = req.headers.authorization?.startsWith("Bearer ")
@@ -23,20 +23,15 @@ const auth = catchAsyncError(async (req, res, next) => {
   }
   if (!decoded.userId || !decoded.sessionId)
     return next(new ErrorHandler("Access token khong gan voi phien dang nhap", 401));
-  const { rows } = await database.query(
-    `UPDATE user_sessions s SET last_activity_at=NOW()
-     FROM users u
-     WHERE s.id=$1 AND s.user_id=$2 AND s.revoked_at IS NULL
-       AND s.expires_at>NOW() AND u.id=s.user_id
-     RETURNING u.id,u.email,u.full_name,u.role,u.security_level_id,
-       u.is_locked,u.is_active,s.id session_id,s.device_id,s.device_type`,
-    [decoded.sessionId, decoded.userId],
-  );
-  if (!rows[0])
+  const user = await sessionActivity.touch({
+    sessionId: decoded.sessionId,
+    userId: decoded.userId,
+  });
+  if (!user)
     return next(new ErrorHandler("Phien dang nhap khong con hieu luc", 401));
-  if (!rows[0].is_active || rows[0].is_locked)
+  if (!user.is_active || user.is_locked)
     return next(new ErrorHandler("Tai khoan khong kha dung", 401));
-  req.user = rows[0];
+  req.user = user;
   req.user.role = req.user.role?.toLowerCase();
   next();
 });

@@ -9,7 +9,7 @@ export default function App() {
   return (
     <Provider store={store}>
       <SafeAreaProvider>
-        <StatusBar barStyle="light-content" backgroundColor="#0F1117" />
+        <StatusBar barStyle="dark-content" backgroundColor="#F5F7FA" />
         <RootNavigator />
       </SafeAreaProvider>
     </Provider>

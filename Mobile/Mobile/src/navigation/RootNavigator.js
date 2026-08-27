@@ -7,6 +7,7 @@ import { useAuth } from '../hooks/useAuth';
 import { restoreSession } from '../store/slices/authSlice';
 import AuthStack from './AuthStack';
 import AppStack from './AppStack';
+import { COLORS } from '../utils/theme';
 
 export default function RootNavigator() {
   const dispatch = useDispatch();
@@ -21,7 +22,7 @@ export default function RootNavigator() {
   if (restoring) {
     return (
       <View style={styles.center}>
-        <ActivityIndicator size="large" color="#E8A33D" />
+        <ActivityIndicator size="large" color={COLORS.primary} />
       </View>
     );
   }
@@ -34,5 +35,5 @@ export default function RootNavigator() {
 }
 
 const styles = StyleSheet.create({
-  center: { flex: 1, justifyContent: 'center', alignItems: 'center', backgroundColor: '#0F1117' },
+  center: { flex: 1, justifyContent: 'center', alignItems: 'center', backgroundColor: COLORS.background },
 });

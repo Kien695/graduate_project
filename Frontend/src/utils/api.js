@@ -4,6 +4,10 @@ const api = axios.create({
   baseURL: import.meta.env.VITE_API_URL || "http://localhost:5000/api",
   withCredentials: true,
 });
+const refreshClient = axios.create({
+  baseURL: import.meta.env.VITE_API_URL || "http://localhost:5000/api",
+  withCredentials: true,
+});
 
 let refreshPromise = null;
 
@@ -21,16 +25,19 @@ api.interceptors.response.use(
     if (error.response?.status === 401 && request && !request._retry && !isAuthRequest) {
       request._retry = true;
       try {
-        refreshPromise ||= api.post("/auth/refresh-token").finally(() => { refreshPromise = null; });
+        refreshPromise ||= refreshClient.post("/auth/refresh-token").finally(() => { refreshPromise = null; });
         const response = await refreshPromise;
         const token = response.data.data.accessToken;
         localStorage.setItem("accessToken", token);
         request.headers.Authorization = `Bearer ${token}`;
         return api(request);
       } catch (refreshError) {
-        localStorage.removeItem("accessToken");
-        localStorage.removeItem("currentUser");
-        if (window.location.pathname !== "/admin/login") window.location.assign("/admin/login");
+        const terminal = [400, 401, 423].includes(refreshError.response?.status);
+        if (terminal) {
+          localStorage.removeItem("accessToken");
+          localStorage.removeItem("currentUser");
+          if (window.location.pathname !== "/admin/login") window.location.assign("/admin/login");
+        }
         return Promise.reject(refreshError);
       }
     }

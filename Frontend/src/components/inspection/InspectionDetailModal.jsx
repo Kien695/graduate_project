@@ -7,6 +7,7 @@ import {
   startInspection,
   updateInspectionChecklist,
   uploadInspectionImages,
+  deleteInspectionImage,
 } from "../../redux/slices/inspectionSlice";
 import Modal from "../common/Modal";
 import StatusBadge from "../common/StatusBadge";
@@ -61,6 +62,10 @@ export default function InspectionDetailModal({ inspection, loading, onClose, on
     await run(uploadInspectionImages, data, "Upload ảnh kiểm định thành công");
     setFiles([]);
   };
+  const removeImage = async (imageId) => {
+    if (!window.confirm("Xác nhận xóa ảnh kiểm định này?")) return;
+    await run(deleteInspectionImage, { imageId }, "Đã xóa ảnh kiểm định");
+  };
   const updateItem = (index, values) => setChecklist((current) => current.map((item, itemIndex) => itemIndex === index ? { ...item, ...values } : item));
   const toggleChecklistItem = async (index, checked) => {
     const nextChecklist = checklist.map((item, itemIndex) => itemIndex === index ? { ...item, checked } : item);
@@ -110,7 +115,7 @@ export default function InspectionDetailModal({ inspection, loading, onClose, on
 
       <section>
         <h3 className="mb-3 font-bold text-slate-900">Hình ảnh kiểm định</h3>
-        <div className="grid grid-cols-2 gap-3 sm:grid-cols-3 lg:grid-cols-4">{inspection.images?.map((image) => <a key={image.id} href={image.url} target="_blank" rel="noreferrer" className="group overflow-hidden rounded-xl border border-slate-200 bg-slate-50"><img src={image.url} alt="Ảnh kiểm định" className="h-32 w-full object-cover transition group-hover:scale-105" /></a>)}{!inspection.images?.length && <div className="col-span-full rounded-xl border border-dashed border-slate-200 py-10 text-center text-sm text-slate-400">Chưa có ảnh kiểm định</div>}</div>
+        <div className="grid grid-cols-2 gap-3 sm:grid-cols-3 lg:grid-cols-4">{inspection.images?.map((image) => <div key={image.id} className="relative overflow-hidden rounded-xl border border-slate-200 bg-slate-50"><a href={image.url} target="_blank" rel="noreferrer"><img src={image.url} alt="Ảnh kiểm định" className="h-32 w-full object-cover" /></a><button type="button" onClick={() => removeImage(image.id)} className="absolute right-2 top-2 rounded bg-rose-600 px-2 py-1 text-xs font-bold text-white">Xóa</button></div>)}{!inspection.images?.length && <div className="col-span-full rounded-xl border border-dashed border-slate-200 py-10 text-center text-sm text-slate-400">Chưa có ảnh kiểm định</div>}</div>
         <div className="mt-4 flex flex-col gap-3 rounded-xl bg-slate-50 p-4 sm:flex-row sm:items-center"><input multiple accept="image/jpeg,image/png,image/webp" type="file" className="block flex-1 text-sm text-slate-600" onChange={(event) => setFiles([...event.target.files])} /><button type="button" disabled={submitting || !files.length} onClick={upload} className="rounded-xl bg-blue-600 px-5 py-2.5 text-sm font-bold text-white disabled:opacity-50">Upload ảnh</button></div>
       </section>
 

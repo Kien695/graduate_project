@@ -2,12 +2,12 @@ import { StyleSheet, Text, View } from 'react-native';
 import { COLORS } from '../../utils/theme';
 
 const config = {
-  DRAFT: { label: 'Chờ duyệt', color: '#F3B24C', background: '#332715' },
-  CREATED: { label: 'Đã tạo', color: '#F3B24C', background: '#332715' },
-  APPROVED: { label: 'Chờ xác nhận', color: '#78A9FF', background: '#172844' },
-  SIGNED: { label: 'Đã xác nhận', color: '#4CC9A0', background: '#123027' },
-  COMPLETED: { label: 'Hoàn tất', color: '#4CC9A0', background: '#123027' },
-  CANCELLED: { label: 'Đã hủy', color: '#FF716C', background: '#35191B' },
+  DRAFT: { label: 'Chờ duyệt', color: '#B7791F', background: '#FFF8E6' },
+  CREATED: { label: 'Đã tạo', color: '#B7791F', background: '#FFF8E6' },
+  APPROVED: { label: 'Chờ xác nhận', color: '#2B6CB0', background: '#EBF4FF' },
+  SIGNED: { label: 'Đã xác nhận', color: '#16805B', background: '#EAF8F2' },
+  COMPLETED: { label: 'Hoàn tất', color: '#16805B', background: '#EAF8F2' },
+  CANCELLED: { label: 'Đã hủy', color: '#C53030', background: '#FFF0F0' },
 };
 export default function StatusBadge({ status }) {
   const key = String(status || '').toUpperCase();

@@ -6,6 +6,7 @@ const { verifyPassword, hashPassword } = require("../utils/password");
 const { hashToken } = require("../utils/token");
 const { generateAccessToken } = require("../utils/generatAccessToken");
 const { generateRefreshToken } = require("../utils/generateRefreshToken");
+const sessionActivity = require("./sessionActivity.service");
 const {
   encryptProfileValue,
   decryptProfileValue,
@@ -53,11 +54,16 @@ const registerCustomer = async (input) => {
           input.name,
         ],
       );
-      await client.query(
+      const customer = await client.query(
         `INSERT INTO customers(
            user_id,full_name,email,phone,email_encrypted,phone_encrypted,is_active
-         ) VALUES($1,$2,NULL,NULL,$3,$4,TRUE)`,
+         ) VALUES($1,$2,NULL,NULL,$3,$4,TRUE) RETURNING id`,
         [rows[0].id, input.name, encryptedEmail, encryptedPhone],
+      );
+      await client.query(
+        `INSERT INTO customer_storage(customer_id,quota_mb,used_mb)
+         VALUES($1,$2,0) ON CONFLICT(customer_id) DO NOTHING`,
+        [customer.rows[0].id, Number(process.env.CUSTOMER_STORAGE_QUOTA_MB || 500)],
       );
     });
   } catch (error) {
@@ -220,17 +226,14 @@ const refresh = async (token) => {
   } catch (_) {
     throw new ErrorHandler("Refresh token không hợp lệ hoặc đã hết hạn", 401);
   }
-  const { rows } = await database.query(
-    `UPDATE user_sessions s SET last_activity_at=NOW()
-     FROM users u
-     WHERE s.id=$1 AND s.user_id=$2 AND s.refresh_token_hash=$3
-       AND s.revoked_at IS NULL AND s.expires_at>NOW() AND u.id=s.user_id
-     RETURNING u.*`,
-    [payload.sessionId, payload.id, hashToken(token)],
-  );
-  if (!rows[0] || rows[0].is_locked || !rows[0].is_active)
+  const user = await sessionActivity.touch({
+    sessionId: payload.sessionId,
+    userId: payload.id,
+    refreshTokenHash: hashToken(token),
+  });
+  if (!user || user.is_locked || !user.is_active)
     throw new ErrorHandler("Phiên đăng nhập không còn hiệu lực", 401);
-  return { accessToken: generateAccessToken(rows[0], payload.sessionId) };
+  return { accessToken: generateAccessToken(user, payload.sessionId) };
 };
 const logout = async (token) => {
   if (token)
@@ -255,6 +258,8 @@ const changePassword = (userId, currentPassword, newPassword) =>
       !(await verifyPassword(currentPassword, rows[0].password_hash))
     )
       throw new ErrorHandler("Mật khẩu hiện tại không đúng", 400);
+    if (await verifyPassword(newPassword, rows[0].password_hash))
+      throw new ErrorHandler("Mật khẩu mới phải khác mật khẩu hiện tại", 400);
     await client.query(
       "UPDATE users SET password_hash=$2,password_changed_at=NOW(),updated_at=NOW() WHERE id=$1",
       [userId, await hashPassword(newPassword)],

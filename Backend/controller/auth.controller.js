@@ -3,6 +3,18 @@ const { catchAsyncError } = require("../middleware/catchAsyncError");
 const { ErrorHandler } = require("../middleware/errorMiddleware");
 const { successResponse } = require("../utils/response");
 
+const refreshCookieOptions = () => ({
+  httpOnly: true,
+  secure: process.env.NODE_ENV === "production",
+  sameSite: process.env.COOKIE_SAME_SITE || (process.env.NODE_ENV === "production" ? "none" : "lax"),
+  path: "/api/auth",
+  maxAge: 7 * 86400000,
+});
+const clearRefreshCookie = (res) => {
+  const { maxAge, ...options } = refreshCookieOptions();
+  res.clearCookie("refreshToken", options);
+};
+
 const requireFields = (body, fields) => {
   const missing = fields.filter((field) => !body[field]);
   if (missing.length)
@@ -19,12 +31,7 @@ const login = catchAsyncError(async (req, res) => {
     userAgent: req.get("user-agent"),
     ipAddress: req.ip,
   });
-  res.cookie("refreshToken", data.refreshToken, {
-    httpOnly: true,
-    secure: process.env.NODE_ENV === "production",
-    sameSite: "strict",
-    maxAge: 7 * 86400000,
-  });
+  res.cookie("refreshToken", data.refreshToken, refreshCookieOptions());
   return successResponse(res, 200, "Đăng nhập thành công", data);
 });
 const registerCustomer = catchAsyncError(async (req, res) => {
@@ -61,7 +68,7 @@ const registerCustomer = catchAsyncError(async (req, res) => {
   return successResponse(res, 201, "Register successfully");
 });
 const refreshToken = catchAsyncError(async (req, res) => {
-  const token = req.body.refreshToken || req.cookies?.refreshToken;
+  const token = req.body?.refreshToken || req.cookies?.refreshToken;
   if (!token) throw new ErrorHandler("Thiếu refresh token", 400);
   return successResponse(
     res,
@@ -71,13 +78,13 @@ const refreshToken = catchAsyncError(async (req, res) => {
   );
 });
 const logout = catchAsyncError(async (req, res) => {
-  await authService.logout(req.body.refreshToken || req.cookies?.refreshToken);
-  res.clearCookie("refreshToken");
+  await authService.logout(req.body?.refreshToken || req.cookies?.refreshToken);
+  clearRefreshCookie(res);
   return successResponse(res, 200, "Đăng xuất thành công");
 });
 const logoutAll = catchAsyncError(async (req, res) => {
   await authService.logoutAll(req.user.id);
-  res.clearCookie("refreshToken");
+  clearRefreshCookie(res);
   return successResponse(res, 200, "Đã đăng xuất tất cả thiết bị");
 });
 const changePassword = catchAsyncError(async (req, res) => {
@@ -89,7 +96,7 @@ const changePassword = catchAsyncError(async (req, res) => {
     req.body.currentPassword,
     req.body.newPassword,
   );
-  res.clearCookie("refreshToken");
+  clearRefreshCookie(res);
   return successResponse(
     res,
     200,

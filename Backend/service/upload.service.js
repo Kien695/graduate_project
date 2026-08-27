@@ -8,20 +8,27 @@ const uploadBuffer = (file, folder = "auto-dealer/inspections") =>
       (error, result) =>
         error
           ? reject(error)
-          : resolve({ url: result.secure_url, public_id: result.public_id }),
+          : resolve({
+              url: result.secure_url,
+              public_id: result.public_id,
+              bytes: Number(result.bytes || file.size || 0),
+            }),
     );
     streamifier.createReadStream(file.buffer).pipe(stream);
   });
 
 const destroy = (publicId) => cloudinary.uploader.destroy(publicId);
+const destroyImage = async (publicId) => {
+  const result = await destroy(publicId);
+  if (!result || !["ok", "not found"].includes(result.result))
+    throw new Error(`Khong the xoa anh Cloudinary: ${publicId}`);
+  return result;
+};
 
 const destroyImages = async (images = []) => {
   for (const image of images) {
     if (!image?.public_id) continue;
-    const result = await destroy(image.public_id);
-    if (!result || !["ok", "not found"].includes(result.result)) {
-      throw new Error(`Khong the xoa anh Cloudinary: ${image.public_id}`);
-    }
+    await destroyImage(image.public_id);
   }
 };
 
@@ -36,4 +43,4 @@ const uploadMany = async (files = [], folder) => {
   }
 };
 
-module.exports = { uploadBuffer, uploadMany, destroyImages };
+module.exports = { uploadBuffer, uploadMany, destroyImage, destroyImages };

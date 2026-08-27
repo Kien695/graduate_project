@@ -46,7 +46,7 @@ export default function LoginScreen({ navigation }) {
 
         {error ? <Text style={authStyles.error}>{error}</Text> : null}
         <TouchableOpacity style={[authStyles.button, loading && authStyles.buttonDisabled]} onPress={handleLogin} disabled={loading}>
-          {loading ? <ActivityIndicator color="#12151C" /> : <Text style={authStyles.buttonText}>Đăng nhập</Text>}
+          {loading ? <ActivityIndicator color="#FFFFFF" /> : <Text style={authStyles.buttonText}>Đăng nhập</Text>}
         </TouchableOpacity>
         <TouchableOpacity style={authStyles.bottomRow} onPress={() => navigation.navigate('RegisterCustomer')}>
           <Text style={authStyles.bottomText}>Chưa có tài khoản? </Text>

@@ -1,6 +1,7 @@
 // src/components/order/OrderCard.js
 import { View, Text, StyleSheet } from 'react-native';
 import { formatVND } from '../../utils/format';
+import { COLORS } from '../../utils/theme';
 
 const STATUS_LABEL = {
   pending: 'Chờ xác nhận',
@@ -32,13 +33,13 @@ export default function OrderCard({ order }) {
 
 const styles = StyleSheet.create({
   card: {
-    backgroundColor: '#1C212C', borderRadius: 10, padding: 16,
-    marginBottom: 12, borderWidth: 1, borderColor: '#2A3142',
+    backgroundColor: COLORS.surface, borderRadius: 10, padding: 16,
+    marginBottom: 12, borderWidth: 1, borderColor: COLORS.border,
   },
   row: { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center' },
-  name: { color: '#F5F3EE', fontSize: 15, fontWeight: '700' },
+  name: { color: COLORS.text, fontSize: 15, fontWeight: '700' },
   badge: { paddingHorizontal: 10, paddingVertical: 4, borderRadius: 12 },
-  badgeText: { color: '#12151C', fontSize: 11, fontWeight: '700' },
-  amount: { color: '#E8A33D', fontSize: 14, marginTop: 8 },
-  note: { color: '#A9AEBA', fontSize: 12, marginTop: 4 },
+  badgeText: { color: COLORS.text, fontSize: 11, fontWeight: '700' },
+  amount: { color: COLORS.primary, fontSize: 14, marginTop: 8 },
+  note: { color: COLORS.muted, fontSize: 12, marginTop: 4 },
 });

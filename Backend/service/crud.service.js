@@ -5,6 +5,8 @@ const {
   decryptCustomerProfile,
   emailLookupHash,
 } = require("../utils/profileEncryption");
+const storageQuota = require("./storageQuota.service");
+const notification = require('./notification.service');
 
 const configs = {
   customers: {
@@ -130,7 +132,10 @@ const create = async (table, input) => {
       `INSERT INTO ${table}(${fields.join(",")}) VALUES(${params.join(",")}) RETURNING *`,
       values,
     );
-    if (table === "customers") await syncCustomerUser(client, rows[0], source);
+    if (table === "customers") {
+      await syncCustomerUser(client, rows[0], source);
+      await storageQuota.ensureForCustomer(rows[0].id, client);
+    }
     return present(table, rows[0]);
   });
 };
@@ -148,7 +153,15 @@ const update = async (table, id, input) => {
     [id, ...values],
   );
   if (!rows[0]) throw new ErrorHandler("Không tìm thấy dữ liệu", 404);
-    if (table === "customers") await syncCustomerUser(client, rows[0], source);
+    if (table === "customers") {
+      await syncCustomerUser(client, rows[0], source);
+      if (rows[0].user_id) await notification.create(client, {
+        userId: rows[0].user_id,
+        title: 'Thông tin cá nhân đã được cập nhật',
+        message: 'Quản trị viên vừa cập nhật thông tin khách hàng của bạn.',
+        type: 'CUSTOMER', referenceId: rows[0].id,
+      });
+    }
     return present(table, rows[0]);
   });
 };

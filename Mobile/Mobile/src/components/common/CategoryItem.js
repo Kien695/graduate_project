@@ -7,6 +7,6 @@ export default function CategoryItem({ icon, label, onPress }) {
 }
 
 const styles = StyleSheet.create({
-  item: { flex: 1, alignItems: 'center' }, icon: { width: 52, height: 52, borderRadius: 16, backgroundColor: '#25191C', borderWidth: 1, borderColor: '#432326', alignItems: 'center', justifyContent: 'center' },
+  item: { flex: 1, alignItems: 'center' }, icon: { width: 52, height: 52, borderRadius: 16, backgroundColor: '#FFF1F0', borderWidth: 1, borderColor: '#FFD5D2', alignItems: 'center', justifyContent: 'center' },
   label: { color: COLORS.text, fontSize: 12, fontWeight: '600', marginTop: 9 },
 });

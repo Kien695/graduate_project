@@ -6,6 +6,7 @@ import {
 } from 'react-native';
 import { createOrder } from '../../api/order.api';
 import { formatVND } from '../../utils/format';
+import { COLORS } from '../../utils/theme';
 
 export default function CreateOrderScreen({ route, navigation }) {
   const { vehicle } = route.params;
@@ -47,7 +48,7 @@ export default function CreateOrderScreen({ route, navigation }) {
         value={note}
         onChangeText={setNote}
         placeholder="Ví dụ: muốn xem xe cuối tuần này"
-        placeholderTextColor="#6B7080"
+        placeholderTextColor="#98A2B3"
         multiline
       />
 
@@ -57,7 +58,7 @@ export default function CreateOrderScreen({ route, navigation }) {
         disabled={loading}
       >
         {loading
-          ? <ActivityIndicator color="#12151C" />
+          ? <ActivityIndicator color={COLORS.white} />
           : <Text style={styles.buttonText}>Xác nhận đặt xe</Text>}
       </TouchableOpacity>
     </View>
@@ -65,24 +66,24 @@ export default function CreateOrderScreen({ route, navigation }) {
 }
 
 const styles = StyleSheet.create({
-  container: { flex: 1, backgroundColor: '#12151C', padding: 16 },
+  container: { flex: 1, backgroundColor: COLORS.background, padding: 16 },
   card: {
-    backgroundColor: '#1C212C', borderRadius: 10, padding: 16,
-    marginBottom: 24, borderWidth: 1, borderColor: '#2A3142',
+    backgroundColor: COLORS.surface, borderRadius: 10, padding: 16,
+    marginBottom: 24, borderWidth: 1, borderColor: COLORS.border,
   },
-  name: { color: '#F5F3EE', fontSize: 18, fontWeight: '700' },
-  meta: { color: '#A9AEBA', fontSize: 13, marginTop: 4 },
-  price: { color: '#E8A33D', fontSize: 16, fontWeight: '700', marginTop: 8 },
-  label: { color: '#A9AEBA', fontSize: 13, marginBottom: 8 },
+  name: { color: COLORS.text, fontSize: 18, fontWeight: '700' },
+  meta: { color: COLORS.muted, fontSize: 13, marginTop: 4 },
+  price: { color: COLORS.primary, fontSize: 16, fontWeight: '700', marginTop: 8 },
+  label: { color: COLORS.muted, fontSize: 13, marginBottom: 8 },
   input: {
-    backgroundColor: '#1C212C', borderRadius: 8, padding: 12,
-    color: '#F5F3EE', fontSize: 14, minHeight: 80, textAlignVertical: 'top',
-    borderWidth: 1, borderColor: '#2A3142',
+    backgroundColor: COLORS.surface, borderRadius: 8, padding: 12,
+    color: COLORS.text, fontSize: 14, minHeight: 80, textAlignVertical: 'top',
+    borderWidth: 1, borderColor: COLORS.border,
   },
   button: {
-    backgroundColor: '#E8A33D', borderRadius: 8, paddingVertical: 14,
+    backgroundColor: COLORS.primary, borderRadius: 8, paddingVertical: 14,
     alignItems: 'center', marginTop: 24,
   },
   buttonDisabled: { opacity: 0.6 },
-  buttonText: { color: '#12151C', fontSize: 15, fontWeight: '700' },
+  buttonText: { color: COLORS.white, fontSize: 15, fontWeight: '700' },
 });

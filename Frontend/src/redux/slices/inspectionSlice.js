@@ -1,5 +1,5 @@
 import { createAsyncThunk, createSlice } from "@reduxjs/toolkit";
-import { getData, postData, putData } from "../../utils/api";
+import { deleteData, getData, postData, putData } from "../../utils/api";
 
 const rejectMessage = (error, fallback, rejectWithValue) =>
   rejectWithValue(error.response?.data?.message || fallback);
@@ -29,8 +29,12 @@ export const updateInspectionChecklist = action("checklist", "put", "checklist")
 export const passInspection = action("pass", "post", "pass");
 export const failInspection = action("fail", "post", "fail");
 export const uploadInspectionImages = action("images", "post", "images");
+export const deleteInspectionImage = createAsyncThunk("inspections/deleteImage", async ({ id, imageId, data }, { rejectWithValue }) => {
+  try { return (await deleteData(`/inspections/${id}/images/${imageId || data?.imageId}`)).data; }
+  catch (error) { return rejectMessage(error, "Không thể xóa ảnh kiểm định", rejectWithValue); }
+});
 
-const mutations = [createInspection, updateInspection, startInspection, updateInspectionChecklist, passInspection, failInspection, uploadInspectionImages];
+const mutations = [createInspection, updateInspection, startInspection, updateInspectionChecklist, passInspection, failInspection, uploadInspectionImages, deleteInspectionImage];
 const slice = createSlice({
   name: "inspections",
   initialState: { items: [], loading: false, submitting: false, error: null },

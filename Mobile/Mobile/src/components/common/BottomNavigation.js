@@ -1,5 +1,5 @@
 import { Ionicons } from '@expo/vector-icons';
-import { Alert, StyleSheet, Text, TouchableOpacity, View } from 'react-native';
+import { StyleSheet, Text, TouchableOpacity, View } from 'react-native';
 import { COLORS } from '../../utils/theme';
 
 const items = [
@@ -15,7 +15,8 @@ export default function BottomNavigation({ navigation, active = 'home' }) {
     if (key === 'home') navigation.navigate('Home');
     else if (key === 'orders') navigation.navigate('MyOrders');
     else if (key === 'contracts') navigation.navigate('ContractList');
-    else Alert.alert('Sắp ra mắt', 'Tính năng này đang được phát triển.');
+    else if (key === 'notifications') navigation.navigate('NotificationList');
+    else if (key === 'account') navigation.navigate('Account');
   };
   return <View style={styles.bar}>{items.map((item) => { const selected = item.key === active; return <TouchableOpacity key={item.key} style={styles.item} onPress={() => navigate(item.key)}><Ionicons name={selected ? item.activeIcon : item.icon} size={21} color={selected ? COLORS.primary : COLORS.muted} /><Text style={[styles.label, selected && styles.active]} numberOfLines={1}>{item.label}</Text></TouchableOpacity>; })}</View>;
 }

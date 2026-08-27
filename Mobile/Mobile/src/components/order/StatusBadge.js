@@ -2,10 +2,10 @@ import { StyleSheet, Text, View } from 'react-native';
 import { COLORS } from '../../utils/theme';
 
 const config = {
-  PENDING: { label: 'Chờ xác nhận', color: '#F3B24C', background: '#332715' },
-  CONFIRMED: { label: 'Đã xác nhận', color: '#4CC9A0', background: '#123027' },
-  CANCELLED: { label: 'Đã hủy', color: '#FF716C', background: '#35191B' },
-  COMPLETED: { label: 'Hoàn tất', color: '#78A9FF', background: '#172844' },
+  PENDING: { label: 'Chờ xác nhận', color: '#B7791F', background: '#FFF8E6' },
+  CONFIRMED: { label: 'Đã xác nhận', color: '#16805B', background: '#EAF8F2' },
+  CANCELLED: { label: 'Đã hủy', color: '#C53030', background: '#FFF0F0' },
+  COMPLETED: { label: 'Hoàn tất', color: '#2B6CB0', background: '#EBF4FF' },
 };
 
 export default function StatusBadge({ status }) {

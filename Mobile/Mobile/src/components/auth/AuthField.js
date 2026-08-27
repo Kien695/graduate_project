@@ -6,7 +6,7 @@ export default function AuthField({ label, error, ...inputProps }) {
     <Text style={authStyles.label}>{label}</Text>
     <TextInput
       style={[authStyles.input, error && authStyles.inputError]}
-      placeholderTextColor="#6B7080"
+      placeholderTextColor="#98A2B3"
       {...inputProps}
     />
     {error ? <Text style={authStyles.fieldError}>{error}</Text> : null}

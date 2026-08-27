@@ -2,6 +2,7 @@ const { database, withTransaction } = require("../database/database");
 const { ErrorHandler } = require("../middleware/errorMiddleware");
 const auditLog = require("./auditLog.service");
 const { decryptProfileValue } = require("../utils/profileEncryption");
+const notification = require('./notification.service');
 
 const list = async (user) => {
   const values = [user.id];
@@ -54,6 +55,11 @@ const update = (id, input, user, ipAddress) => withTransaction(async (client) =>
   if (!["draft", "approved"].includes(old.rows[0].status)) throw new ErrorHandler("Không thể sửa hợp đồng ở trạng thái hiện tại", 409);
   const { rows } = await client.query("UPDATE contracts SET terms=COALESCE($2,terms),contract_number=COALESCE($3,contract_number),updated_at=NOW() WHERE id=$1 RETURNING *", [id, input.terms || null, input.contract_number || null]);
   await auditLog.record(client, { userId: user.id, action: "UPDATE", entityType: "contract", entityId: id, oldValues: old.rows[0], newValues: rows[0], ipAddress });
+  await notification.createForCustomer(client, old.rows[0].customer_id, {
+    title: 'Hợp đồng đã được cập nhật',
+    message: `Hợp đồng ${rows[0].contract_number} vừa được cập nhật.`,
+    type: 'CONTRACT', referenceId: Number(id),
+  });
   return rows[0];
 });
 const setStatus = (id, status, user, ipAddress) => withTransaction(async (client) => {
@@ -69,6 +75,11 @@ const setStatus = (id, status, user, ipAddress) => withTransaction(async (client
     approved_at=CASE WHEN $3 THEN NOW() ELSE approved_at END,signed_at=CASE WHEN $4 THEN NOW() ELSE signed_at END,updated_at=NOW()
     WHERE id=$1 RETURNING *`, [id, user.id, status === "approved", status === "signed"]);
   await auditLog.record(client, { userId: user.id, action: status.toUpperCase(), entityType: "contract", entityId: id, oldValues: old.rows[0], newValues: rows[0], ipAddress });
+  await notification.createForCustomer(client, old.rows[0].customer_id, {
+    title: 'Trạng thái hợp đồng đã thay đổi',
+    message: `Hợp đồng ${rows[0].contract_number} đã chuyển sang trạng thái ${status}.`,
+    type: 'CONTRACT', referenceId: Number(id),
+  });
   return rows[0];
 });
 const addPayment = (id, input, user, ipAddress) => withTransaction(async (client) => {

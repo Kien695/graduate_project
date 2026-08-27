@@ -3,8 +3,10 @@ const { ErrorHandler } = require('../middleware/errorMiddleware');
 
 const SELECT_FIELDS = `
   id,
+  vin,
   brand,
   model,
+  manufacture_year,
   manufacture_year AS year,
   color,
   price,

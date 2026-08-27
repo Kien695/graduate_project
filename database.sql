@@ -572,3 +572,9 @@ CREATE INDEX idx_audit_contract
 ON audit_logs(contract_id);
 
 select * from users
+select * from customers
+select * from employees
+select * from mac_policy
+
+select * from backup_history
+select * from customer_storage

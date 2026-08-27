@@ -69,7 +69,15 @@ const images = catchAsyncError(async (req, res) =>
     res,
     201,
     "Upload ảnh thành công",
-    await s.addImages(req.params.id, req.files),
+    await s.addImages(req.params.id, req.files, req.user),
+  ),
+);
+const removeImage = catchAsyncError(async (req, res) =>
+  successResponse(
+    res,
+    200,
+    "Xóa ảnh kiểm định thành công",
+    await s.removeImage(req.params.id, req.params.imageId),
   ),
 );
 module.exports = {
@@ -82,4 +90,5 @@ module.exports = {
   pass: action("passed"),
   fail: action("failed"),
   images,
+  removeImage,
 };

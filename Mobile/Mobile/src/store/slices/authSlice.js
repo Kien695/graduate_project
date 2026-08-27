@@ -4,6 +4,7 @@ import { loginRequest, logoutRequest } from '../../api/auth.api';
 import { storage } from '../../utils/storage';
 import { resolveDeviceId } from '../../hooks/useDeviceId';
 import { STORAGE_KEYS, DEVICE_TYPE } from '../../utils/constants';
+import { changeCurrentPassword, getCurrentUser, updateCurrentUser, uploadCurrentUserAvatar } from '../../api/profile.api';
 
 // --- Đăng nhập ---
 export const login = createAsyncThunk(
@@ -50,6 +51,45 @@ export const logout = createAsyncThunk('auth/logout', async () => {
   }
 });
 
+export const loadCurrentUser = createAsyncThunk('auth/me', async (_, { rejectWithValue }) => {
+  try {
+    const user = await getCurrentUser();
+    await storage.setObject(STORAGE_KEYS.CURRENT_USER, user);
+    return user;
+  } catch (error) {
+    return rejectWithValue(error.response?.data?.message || 'Không thể tải thông tin tài khoản.');
+  }
+});
+
+export const updateProfile = createAsyncThunk('auth/updateProfile', async (profile, { rejectWithValue }) => {
+  try {
+    const user = await updateCurrentUser(profile);
+    await storage.setObject(STORAGE_KEYS.CURRENT_USER, user);
+    return user;
+  } catch (error) {
+    return rejectWithValue(error.response?.data?.message || 'Không thể cập nhật thông tin cá nhân.');
+  }
+});
+
+export const changePassword = createAsyncThunk('auth/changePassword', async (payload, { rejectWithValue }) => {
+  try {
+    await changeCurrentPassword(payload);
+    return true;
+  } catch (error) {
+    return rejectWithValue(error.response?.data?.message || 'Không thể đổi mật khẩu.');
+  }
+});
+
+export const updateAvatar = createAsyncThunk('auth/updateAvatar', async (asset, { rejectWithValue }) => {
+  try {
+    const user = await uploadCurrentUserAvatar(asset);
+    await storage.setObject(STORAGE_KEYS.CURRENT_USER, user);
+    return user;
+  } catch (error) {
+    return rejectWithValue(error.response?.data?.message || 'Không thể cập nhật ảnh đại diện.');
+  }
+});
+
 // --- Khôi phục phiên khi mở lại app ---
 export const restoreSession = createAsyncThunk('auth/restore', async () => {
   const token = await storage.get(STORAGE_KEYS.ACCESS_TOKEN);
@@ -85,6 +125,15 @@ const authSlice = createSlice({
       .addCase(logout.fulfilled, (state) => {
         state.user = null;
         state.isAuthenticated = false;
+      })
+      .addCase(loadCurrentUser.fulfilled, (state, action) => {
+        state.user = action.payload;
+      })
+      .addCase(updateProfile.fulfilled, (state, action) => {
+        state.user = action.payload;
+      })
+      .addCase(updateAvatar.fulfilled, (state, action) => {
+        state.user = action.payload;
       })
       .addCase(restoreSession.fulfilled, (state, action) => {
         state.user = action.payload;

@@ -12,6 +12,8 @@ CREATE INDEX IF NOT EXISTS security_levels_rank_idx ON security_levels(rank);
 CREATE TABLE IF NOT EXISTS users (id SERIAL PRIMARY KEY,username VARCHAR(100),password_hash TEXT NOT NULL,role VARCHAR(30),email VARCHAR(255),phone VARCHAR(30),failed_login_count INTEGER DEFAULT 0,locked_until TIMESTAMP,security_level_id INTEGER REFERENCES security_levels(id),status VARCHAR(30),created_at TIMESTAMP DEFAULT NOW());
 ALTER TABLE users ADD COLUMN IF NOT EXISTS full_name VARCHAR(150);
 ALTER TABLE users ADD COLUMN IF NOT EXISTS avatar_url TEXT;
+ALTER TABLE users ADD COLUMN IF NOT EXISTS avatar_public_id TEXT;
+ALTER TABLE users ADD COLUMN IF NOT EXISTS avatar_size_bytes BIGINT;
 ALTER TABLE users ADD COLUMN IF NOT EXISTS is_active BOOLEAN DEFAULT TRUE;
 ALTER TABLE users ADD COLUMN IF NOT EXISTS is_locked BOOLEAN DEFAULT FALSE;
 ALTER TABLE users ADD COLUMN IF NOT EXISTS failed_login_attempts INTEGER DEFAULT 0;
@@ -58,6 +60,17 @@ ALTER TABLE customers ADD COLUMN IF NOT EXISTS cccd_encrypted TEXT;
 ALTER TABLE customers ADD COLUMN IF NOT EXISTS email_encrypted TEXT;
 ALTER TABLE customers ADD COLUMN IF NOT EXISTS phone_encrypted TEXT;
 ALTER TABLE customers ADD COLUMN IF NOT EXISTS address_encrypted TEXT;
+CREATE TABLE IF NOT EXISTS customer_storage (
+  id BIGSERIAL PRIMARY KEY,
+  customer_id INTEGER NOT NULL UNIQUE REFERENCES customers(id) ON DELETE CASCADE,
+  quota_mb NUMERIC(14,6) NOT NULL DEFAULT 500 CHECK (quota_mb > 0),
+  used_mb NUMERIC(14,6) NOT NULL DEFAULT 0 CHECK (used_mb >= 0),
+  created_at TIMESTAMPTZ NOT NULL DEFAULT NOW(),
+  updated_at TIMESTAMPTZ NOT NULL DEFAULT NOW(),
+  CHECK (used_mb <= quota_mb)
+);
+INSERT INTO customer_storage(customer_id,quota_mb,used_mb)
+SELECT id,500,0 FROM customers ON CONFLICT(customer_id) DO NOTHING;
 
 CREATE TABLE IF NOT EXISTS vehicles (id SERIAL PRIMARY KEY,brand VARCHAR(80),model VARCHAR(100),manufacture_year INTEGER,color VARCHAR(50),price NUMERIC(15,2),status VARCHAR(30),created_at TIMESTAMP DEFAULT NOW());
 ALTER TABLE vehicles ADD COLUMN IF NOT EXISTS vin VARCHAR(50);
@@ -123,6 +136,8 @@ CREATE TABLE IF NOT EXISTS inspection_images (id SERIAL PRIMARY KEY,inspection_i
 ALTER TABLE inspection_images ADD COLUMN IF NOT EXISTS url TEXT;
 ALTER TABLE inspection_images ADD COLUMN IF NOT EXISTS public_id TEXT;
 ALTER TABLE inspection_images ADD COLUMN IF NOT EXISTS created_at TIMESTAMPTZ DEFAULT NOW();
+ALTER TABLE inspection_images ADD COLUMN IF NOT EXISTS size_bytes BIGINT;
+ALTER TABLE inspection_images ADD COLUMN IF NOT EXISTS customer_id INTEGER REFERENCES customers(id) ON DELETE SET NULL;
 
 CREATE TABLE IF NOT EXISTS audit_logs (id SERIAL PRIMARY KEY,user_id INTEGER REFERENCES users(id),contract_id INTEGER REFERENCES contracts(id),action VARCHAR(50),old_data JSONB,new_data JSONB,created_at TIMESTAMP DEFAULT NOW());
 ALTER TABLE audit_logs ADD COLUMN IF NOT EXISTS entity_type VARCHAR(80);
@@ -133,7 +148,43 @@ ALTER TABLE audit_logs ADD COLUMN IF NOT EXISTS ip_address INET;
 CREATE INDEX IF NOT EXISTS audit_logs_entity_idx ON audit_logs(entity_type,entity_id,created_at DESC);
 
 CREATE TABLE IF NOT EXISTS backup_records (id SERIAL PRIMARY KEY,file_name TEXT NOT NULL,file_path TEXT NOT NULL,status VARCHAR(20) NOT NULL,size_bytes BIGINT,created_by INTEGER REFERENCES users(id),created_at TIMESTAMPTZ DEFAULT NOW());
+CREATE TABLE IF NOT EXISTS backup_history (
+  id BIGSERIAL PRIMARY KEY,
+  backup_record_id INTEGER REFERENCES backup_records(id) ON DELETE SET NULL,
+  file_name TEXT NOT NULL,
+  size BIGINT,
+  status VARCHAR(30) NOT NULL,
+  created_at TIMESTAMPTZ NOT NULL DEFAULT NOW(),
+  completed_at TIMESTAMPTZ
+);
+CREATE INDEX IF NOT EXISTS backup_history_created_at_idx ON backup_history(created_at DESC);
 CREATE TABLE IF NOT EXISTS monitoring_alert_configs (id SERIAL PRIMARY KEY,cpu_threshold NUMERIC(5,2) DEFAULT 85,memory_threshold NUMERIC(5,2) DEFAULT 85,load_threshold NUMERIC(8,2) DEFAULT 5,updated_by INTEGER REFERENCES users(id),updated_at TIMESTAMPTZ DEFAULT NOW());
+ALTER TABLE monitoring_alert_configs ADD COLUMN IF NOT EXISTS response_time_threshold_ms NUMERIC(10,2) DEFAULT 2000;
+CREATE TABLE IF NOT EXISTS monitoring_alerts (
+  id BIGSERIAL PRIMARY KEY,
+  metric VARCHAR(50) NOT NULL,
+  measured_value NUMERIC(14,2) NOT NULL,
+  threshold_value NUMERIC(14,2) NOT NULL,
+  message TEXT NOT NULL,
+  delivery_status VARCHAR(30) NOT NULL DEFAULT 'logged',
+  created_at TIMESTAMPTZ NOT NULL DEFAULT NOW(),
+  updated_at TIMESTAMPTZ NOT NULL DEFAULT NOW()
+);
+CREATE INDEX IF NOT EXISTS monitoring_alerts_created_at_idx ON monitoring_alerts(created_at DESC);
+
+CREATE TABLE IF NOT EXISTS notifications (
+  id BIGSERIAL PRIMARY KEY,
+  user_id INTEGER NOT NULL REFERENCES users(id) ON DELETE CASCADE,
+  title VARCHAR(180) NOT NULL,
+  message TEXT NOT NULL,
+  type VARCHAR(30) NOT NULL,
+  reference_id INTEGER,
+  is_read BOOLEAN NOT NULL DEFAULT FALSE,
+  created_at TIMESTAMPTZ NOT NULL DEFAULT NOW()
+);
+ALTER TABLE notifications ADD COLUMN IF NOT EXISTS updated_at TIMESTAMPTZ NOT NULL DEFAULT NOW();
+CREATE INDEX IF NOT EXISTS notifications_user_created_idx ON notifications(user_id,created_at DESC);
+CREATE INDEX IF NOT EXISTS notifications_user_unread_idx ON notifications(user_id,is_read,created_at DESC);
 
 -- Normalize legacy uppercase checks while preserving existing values.
 ALTER TABLE users DROP CONSTRAINT IF EXISTS users_role_check;

@@ -5,6 +5,8 @@ const r = express.Router();
 r.use(auth, authorize("admin"));
 r.get("/", c.list);
 r.post("/", c.create);
+r.get("/history", c.history);
+r.post("/retention", c.retention);
 r.get("/:id", c.get);
 r.post("/:id/restore", c.restore);
 module.exports = r;

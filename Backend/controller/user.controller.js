@@ -19,6 +19,9 @@ const updateMe = catchAsyncError(async (req, res) =>
     await userService.updateMe(req.user.id, req.body),
   ),
 );
+const updateAvatar = catchAsyncError(async (req, res) =>
+  successResponse(res, 200, "Cập nhật ảnh đại diện thành công", await userService.updateAvatar(req.user, req.file)),
+);
 const updateSecurityLevel = catchAsyncError(async (req, res) => {
   if (!req.body.securityLevelId)
     throw new ErrorHandler("securityLevelId là bắt buộc", 400);
@@ -37,4 +40,4 @@ const lock = catchAsyncError(async (req, res) =>
     await authService.setLock(req.params.id, true),
   ),
 );
-module.exports = { getMe, updateMe, updateSecurityLevel, lock };
+module.exports = { getMe, updateMe, updateAvatar, updateSecurityLevel, lock };
