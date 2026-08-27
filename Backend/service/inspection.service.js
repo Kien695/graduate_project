@@ -47,19 +47,29 @@ const get = async (id, executor = database) => {
 };
 
 const create = (input, user) => withTransaction(async (client) => {
+  const requiredIds = [input.vehicle_id, input.order_id, input.contract_id];
+  if (requiredIds.some((id) => !Number.isInteger(Number(id)) || Number(id) <= 0))
+    throw new ErrorHandler("vehicle_id, order_id va contract_id la bat buoc", 400);
   const vehicle = await client.query("SELECT id FROM vehicles WHERE id=$1", [input.vehicle_id]);
   if (!vehicle.rows[0]) throw new ErrorHandler("Không tìm thấy xe", 404);
-  const order = await client.query(
-    `SELECT id FROM orders
-     WHERE vehicle_id=$1 AND LOWER(status) IN ('confirmed','completed')
-     ORDER BY created_at DESC LIMIT 1`,
-    [input.vehicle_id],
+  const relation = await client.query(
+    `SELECT c.id contract_id,o.id order_id,v.id vehicle_id
+     FROM contracts c
+     JOIN orders o ON o.id=c.order_id
+     JOIN vehicles v ON v.id=o.vehicle_id
+     WHERE c.id=$1 AND o.id=$2 AND v.id=$3
+       AND LOWER(o.status) IN ('confirmed','completed')
+       AND LOWER(c.status)<>'cancelled'
+     FOR SHARE OF c,o,v`,
+    [input.contract_id, input.order_id, input.vehicle_id],
   );
+  if (!relation.rows[0])
+    throw new ErrorHandler("Contract, order va vehicle khong cung mot giao dich hop le", 409);
   const { rows } = await client.query(
-    `INSERT INTO inspections(vehicle_id,order_id,inspector_id,status,checklist,notes,result,note)
-     VALUES($1,$2,$3,'pending','[]'::jsonb,$4,'WAITING',$4)
+    `INSERT INTO inspections(vehicle_id,order_id,contract_id,inspector_id,status,checklist,notes,result,note)
+     VALUES($1,$2,$3,$4,'pending','[]'::jsonb,$5,'WAITING',$5)
      RETURNING *`,
-    [input.vehicle_id, order.rows[0]?.id || null, user.id, input.notes || null],
+    [input.vehicle_id,input.order_id,input.contract_id,user.id,input.notes || null],
   );
   return rows[0];
 });

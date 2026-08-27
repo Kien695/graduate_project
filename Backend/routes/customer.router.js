@@ -5,17 +5,31 @@ const { database } = require("../database/database");
 const { catchAsyncError } = require("../middleware/catchAsyncError");
 const { successResponse } = require("../utils/response");
 const { ErrorHandler } = require("../middleware/errorMiddleware");
+const customerContractService = require("../service/customerContract.service");
+const contractService = require("../service/contract.service");
 const c = makeCrudController("customers"),
   r = express.Router();
+
+const resolveCustomerId = async (req) => {
+  if (req.user.role !== "customer") return req.params.id;
+  const { rows } = await database.query(
+    "SELECT id FROM customers WHERE user_id=$1 AND is_active IS DISTINCT FROM FALSE",
+    [req.user.id],
+  );
+  if (!rows[0]) throw new ErrorHandler("Khong tim thay ho so khach hang", 404);
+  return rows[0].id;
+};
+
 r.use(auth);
 r.get("/", authorize("admin", "manager", "staff"), c.list);
 r.post("/", authorize("admin", "manager", "staff"), c.create);
 r.get(
   "/:id/orders",
   catchAsyncError(async (req, res) => {
+    const customerId = await resolveCustomerId(req);
     const { rows } = await database.query(
       "SELECT * FROM orders WHERE customer_id=$1 ORDER BY created_at DESC",
-      [req.params.id],
+      [customerId],
     );
     return successResponse(res, 200, "Lấy lịch sử đơn hàng thành công", rows);
   }),
@@ -23,11 +37,23 @@ r.get(
 r.get(
   "/:id/contracts",
   catchAsyncError(async (req, res) => {
-    const { rows } = await database.query(
-      "SELECT ct.* FROM contracts ct JOIN orders o ON o.id=ct.order_id WHERE o.customer_id=$1",
-      [req.params.id],
+    if (req.user.role === "customer")
+      return successResponse(
+        res,
+        200,
+        "Lấy hợp đồng thành công",
+        await customerContractService.list(req.user.id),
+      );
+    const customerId = await resolveCustomerId(req);
+    const contracts = await contractService.list(req.user);
+    return successResponse(
+      res,
+      200,
+      "Lấy hợp đồng thành công",
+      contracts.filter(
+        (contract) => Number(contract.customer_id) === Number(customerId),
+      ),
     );
-    return successResponse(res, 200, "Lấy hợp đồng thành công", rows);
   }),
 );
 r.post(

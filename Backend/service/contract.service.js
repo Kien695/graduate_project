@@ -1,14 +1,11 @@
 const { database, withTransaction } = require("../database/database");
 const { ErrorHandler } = require("../middleware/errorMiddleware");
 const auditLog = require("./auditLog.service");
+const { decryptProfileValue } = require("../utils/profileEncryption");
 
 const list = async (user) => {
-  const values = [];
-  let access = "";
-  if (user.role !== "admin") {
-    values.push(user.id);
-    access = "WHERE COALESCE(sl.rank,0)<=COALESCE((SELECT us.rank FROM users ux LEFT JOIN security_levels us ON us.id=ux.security_level_id WHERE ux.id=$1),0)";
-  }
+  const values = [user.id];
+  const access = "WHERE COALESCE(sl.rank,0)<=COALESCE((SELECT us.rank FROM users ux LEFT JOIN security_levels us ON us.id=ux.security_level_id WHERE ux.id=$1),0)";
   const { rows } = await database.query(`SELECT c.*,o.customer_id,o.vehicle_id,o.total_amount order_total_amount,
     cu.full_name customer_name,v.brand vehicle_brand,v.model vehicle_model,v.vin,
     sl.name security_level_name,COALESCE(SUM(p.amount),0) paid_amount
@@ -21,13 +18,20 @@ const list = async (user) => {
 const get = async (id) => {
   const { rows } = await database.query(`SELECT c.*,o.customer_id,o.vehicle_id,o.total_amount order_total_amount,
     cu.full_name customer_name,cu.email customer_email,cu.phone customer_phone,
+    cu.email_encrypted customer_email_encrypted,cu.phone_encrypted customer_phone_encrypted,
     v.brand vehicle_brand,v.model vehicle_model,v.vin,sl.name security_level_name,sl.rank security_level_rank,
     COALESCE(SUM(p.amount),0) paid_amount
     FROM contracts c JOIN orders o ON o.id=c.order_id LEFT JOIN payments p ON p.contract_id=c.id
     LEFT JOIN customers cu ON cu.id=o.customer_id LEFT JOIN vehicles v ON v.id=o.vehicle_id
     LEFT JOIN security_levels sl ON sl.id=c.security_level_id
-    WHERE c.id=$1 GROUP BY c.id,o.customer_id,o.vehicle_id,o.total_amount,cu.full_name,cu.email,cu.phone,v.brand,v.model,v.vin,sl.name,sl.rank`, [id]);
+    WHERE c.id=$1 GROUP BY c.id,o.customer_id,o.vehicle_id,o.total_amount,cu.full_name,
+    cu.email,cu.phone,cu.email_encrypted,cu.phone_encrypted,
+    v.brand,v.model,v.vin,sl.name,sl.rank`, [id]);
   if (!rows[0]) throw new ErrorHandler("Không tìm thấy hợp đồng", 404);
+  rows[0].customer_email = decryptProfileValue(rows[0].customer_email_encrypted) || rows[0].customer_email;
+  rows[0].customer_phone = decryptProfileValue(rows[0].customer_phone_encrypted) || rows[0].customer_phone;
+  delete rows[0].customer_email_encrypted;
+  delete rows[0].customer_phone_encrypted;
   const payments = await database.query(`SELECT p.*,u.full_name created_by_name FROM payments p LEFT JOIN users u ON u.id=p.created_by WHERE p.contract_id=$1 ORDER BY p.paid_at DESC`, [id]);
   return { ...rows[0], payments: payments.rows };
 };

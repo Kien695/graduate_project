@@ -126,7 +126,7 @@ const run = async () => {
         email: process.env.ADMIN_EMAIL,
         password: process.env.ADMIN_PASSWORD,
         deviceId: "e2e-main",
-        deviceType: "desktop",
+        deviceType: "PC",
       },
       false,
     );
@@ -232,15 +232,26 @@ const run = async () => {
 
     const inspection = await call("POST", "/inspections", {
       vehicle_id: ids.vehicle,
+      order_id: ids.order,
+      contract_id: ids.contract,
       notes: "E2E inspection",
     });
     ids.inspection = inspection.id;
     assert(inspection.status === "pending", "Create inspection");
+    const checkingInspection = await call(
+      "POST",
+      `/inspections/${ids.inspection}/start`,
+    );
+    assert(checkingInspection.status === "checking", "Start inspection");
+    await call("PUT", `/inspections/${ids.inspection}/checklist`, {
+      checklist: [{ key: "e2e", label: "E2E checklist", checked: true }],
+    });
     const imagePath = path.resolve(
       __dirname,
       "../../Frontend/src/assets/showroom-login.png",
     );
     if (
+      process.env.E2E_SKIP_CLOUDINARY !== "true" &&
       fs.existsSync(imagePath) &&
       process.env.CLOUD_NAME &&
       process.env.CLOUD_KEY &&

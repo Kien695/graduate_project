@@ -18,14 +18,20 @@ const remove = async (id, userId) => {
 };
 const check = async (user) => {
   const { rows } = await database.query(
-    "SELECT COUNT(*)::int active_devices FROM user_sessions WHERE user_id=$1 AND revoked_at IS NULL AND expires_at>NOW()",
+    `SELECT device_type,COUNT(*)::int active_devices
+     FROM user_sessions
+     WHERE user_id=$1 AND revoked_at IS NULL AND expires_at>NOW()
+     GROUP BY device_type`,
     [user.id],
   );
-  const limit = user.role === "customer" ? 2 : 1;
+  const byType = Object.fromEntries(
+    rows.map((row) => [String(row.device_type).toUpperCase(), row.active_devices]),
+  );
+  const activeDevices = rows.reduce((total, row) => total + row.active_devices, 0);
   return {
-    activeDevices: rows[0].active_devices,
-    limit,
-    canLogin: rows[0].active_devices < limit,
+    activeDevices,
+    activeByType: byType,
+    policy: user.role === "customer" ? { PC: 1, MOBILE: 1 } : { TOTAL: 1 },
   };
 };
 module.exports = { list, remove, check };

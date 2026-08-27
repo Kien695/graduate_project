@@ -4,6 +4,18 @@ import { useNavigate } from "react-router-dom";
 import { toast } from "react-toastify";
 import { clearAuthError, login } from "../../redux/slices/authSlice";
 import { Icon } from "../common/Icons";
+
+const WEB_DEVICE_ID_KEY = "autoDealerWebDeviceId";
+const getWebDeviceId = () => {
+  const existing = localStorage.getItem(WEB_DEVICE_ID_KEY);
+  if (existing) return existing;
+  const generated = globalThis.crypto?.randomUUID
+    ? globalThis.crypto.randomUUID()
+    : `web-${Date.now()}-${Math.random().toString(36).slice(2)}`;
+  localStorage.setItem(WEB_DEVICE_ID_KEY, generated);
+  return generated;
+};
+
 export default function LoginForm() {
   const [email, setEmail] = useState(""),
     [password, setPassword] = useState(""),
@@ -23,8 +35,8 @@ export default function LoginForm() {
       login({
         email,
         password,
-        deviceId: navigator.userAgent,
-        deviceType: /Mobi/i.test(navigator.userAgent) ? "mobile" : "desktop",
+        deviceId: getWebDeviceId(),
+        deviceType: "PC",
       }),
     );
     if (login.fulfilled.match(result)) {

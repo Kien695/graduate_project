@@ -11,7 +11,7 @@ import LoadingState from "../common/LoadingState";
 import { Icon } from "../common/Icons";
 import InspectionDetailModal from "./InspectionDetailModal";
 
-const emptyForm = { vehicle_id: "", notes: "" };
+const emptyForm = { contract_id: "", order_id: "", vehicle_id: "", notes: "" };
 
 export default function InspectionManager() {
   const dispatch = useDispatch();
@@ -20,8 +20,8 @@ export default function InspectionManager() {
   const [page, setPage] = useState(1);
   const [formOpen, setFormOpen] = useState(false);
   const [form, setForm] = useState(emptyForm);
-  const [vehicles, setVehicles] = useState([]);
-  const [vehiclesLoading, setVehiclesLoading] = useState(false);
+  const [contracts, setContracts] = useState([]);
+  const [contractsLoading, setContractsLoading] = useState(false);
   const [detail, setDetail] = useState(null);
   const [detailLoading, setDetailLoading] = useState(false);
 
@@ -36,11 +36,11 @@ export default function InspectionManager() {
   const openCreate = async () => {
     setForm(emptyForm);
     setFormOpen(true);
-    if (vehicles.length) return;
-    setVehiclesLoading(true);
-    try { setVehicles((await getData("/vehicles")).data || []); }
+    if (contracts.length) return;
+    setContractsLoading(true);
+    try { setContracts((await getData("/contracts")).data || []); }
     catch (requestError) { toast.error(requestError.response?.data?.message || "Không thể tải danh sách xe"); }
-    finally { setVehiclesLoading(false); }
+    finally { setContractsLoading(false); }
   };
 
   const openDetail = async (id) => {
@@ -54,7 +54,7 @@ export default function InspectionManager() {
   const submitInspection = async (event) => {
     event.preventDefault();
     try {
-      const created = await dispatch(createInspection({ vehicle_id: Number(form.vehicle_id), notes: form.notes.trim() || null })).unwrap();
+      const created = await dispatch(createInspection({ contract_id: Number(form.contract_id), order_id: Number(form.order_id), vehicle_id: Number(form.vehicle_id), notes: form.notes.trim() || null })).unwrap();
       toast.success("Đã tạo phiếu kiểm định");
       setFormOpen(false);
       setForm(emptyForm);
@@ -87,10 +87,11 @@ export default function InspectionManager() {
 
     <Modal open={formOpen} onClose={() => setFormOpen(false)} title="Thêm phiếu kiểm định">
       <form onSubmit={submitInspection} className="space-y-5">
-        <label className="block text-xs font-bold text-slate-700">Xe cần kiểm định *<select required disabled={vehiclesLoading} className="form-control mt-2" value={form.vehicle_id} onChange={(event) => setForm({ ...form, vehicle_id: event.target.value })}><option value="">{vehiclesLoading ? "Đang tải danh sách xe..." : "Chọn xe"}</option>{vehicles.map((vehicle) => <option key={vehicle.id} value={vehicle.id}>{[vehicle.brand, vehicle.model, vehicle.vin].filter(Boolean).join(" · ")} · {String(vehicle.status || "").toUpperCase()}</option>)}</select></label>
+        <label className="block text-xs font-bold text-slate-700">Hợp đồng / đơn hàng / xe *<select required disabled={contractsLoading} className="form-control mt-2" value={form.contract_id} onChange={(event) => { const contract = contracts.find((item) => String(item.id) === event.target.value); setForm({ ...form, contract_id: event.target.value, order_id: contract?.order_id || "", vehicle_id: contract?.vehicle_id || "" }); }}><option value="">{contractsLoading ? "Đang tải hợp đồng..." : "Chọn hợp đồng"}</option>{contracts.filter((contract) => String(contract.status).toLowerCase() !== "cancelled").map((contract) => <option key={contract.id} value={contract.id}>{contract.contract_number} · DH{String(contract.order_id).padStart(5, "0")} · {[contract.vehicle_brand, contract.vehicle_model, contract.vin].filter(Boolean).join(" ")}</option>)}</select></label>
+        {form.contract_id && <div className="rounded-xl bg-slate-50 p-3 text-xs text-slate-600">Contract #{form.contract_id} · Order #{form.order_id} · Vehicle #{form.vehicle_id}</div>}
         <label className="block text-xs font-bold text-slate-700">Ghi chú<textarea rows="4" className="form-control mt-2" placeholder="Nhập nội dung cần lưu ý khi kiểm định..." value={form.notes} onChange={(event) => setForm({ ...form, notes: event.target.value })} /></label>
         <div className="rounded-xl bg-blue-50 p-3 text-xs leading-5 text-blue-700">Người kiểm định được xác định tự động từ tài khoản Staff/Admin đang đăng nhập. Phiếu mới có trạng thái chờ kiểm định.</div>
-        <button disabled={submitting || vehiclesLoading} className="w-full rounded-xl bg-blue-600 py-3 text-sm font-bold text-white disabled:opacity-50">{submitting ? "Đang tạo..." : "Tạo phiếu kiểm định"}</button>
+        <button disabled={submitting || contractsLoading} className="w-full rounded-xl bg-blue-600 py-3 text-sm font-bold text-white disabled:opacity-50">{submitting ? "Đang tạo..." : "Tạo phiếu kiểm định"}</button>
       </form>
     </Modal>
 

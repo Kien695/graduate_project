@@ -6,6 +6,7 @@
     "dev": "nodemon --inspect index.js",
     "start": "node index.js",
     "db:migrate": "node database/migrate.js",
+    "db:encrypt-profiles": "node database/migrateEncryptedProfiles.js",
     "db:validate": "node database/validateSchema.js",
     "db:inspect": "node database/inspectSchema.js",
     "db:create-admin": "node database/createAdmin.js",

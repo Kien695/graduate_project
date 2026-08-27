@@ -1,18 +1,31 @@
 const jwt = require("jsonwebtoken");
+const crypto = require("crypto");
 const { database, withTransaction } = require("../database/database");
 const { ErrorHandler } = require("../middleware/errorMiddleware");
 const { verifyPassword, hashPassword } = require("../utils/password");
 const { hashToken } = require("../utils/token");
 const { generateAccessToken } = require("../utils/generatAccessToken");
 const { generateRefreshToken } = require("../utils/generateRefreshToken");
+const {
+  encryptProfileValue,
+  decryptProfileValue,
+  emailLookupHash,
+} = require("../utils/profileEncryption");
 const MAX_FAILURES = Number(process.env.MAX_FAILED_LOGIN_ATTEMPTS || 5);
+
+const normalizeDeviceType = (deviceType, userAgent = "") => {
+  const requested = String(deviceType || "").trim().toUpperCase();
+  if (["PC", "MOBILE"].includes(requested)) return requested;
+  return /android|iphone|ipad|mobile/i.test(userAgent) ? "MOBILE" : "PC";
+};
 
 const registerCustomer = async (input) => {
   try {
     return await withTransaction(async (client) => {
       const existing = await client.query(
-        "SELECT id FROM users WHERE LOWER(email)=LOWER($1) LIMIT 1",
-        [input.email],
+        `SELECT id FROM users
+         WHERE email_lookup_hash=$1 OR LOWER(email)=LOWER($2) LIMIT 1`,
+        [emailLookupHash(input.email), input.email],
       );
       if (existing.rows[0])
         throw new ErrorHandler(
@@ -22,13 +35,29 @@ const registerCustomer = async (input) => {
         );
 
       const passwordHash = await hashPassword(input.password);
+      const encryptedEmail = encryptProfileValue(input.email);
+      const encryptedPhone = encryptProfileValue(input.phone);
+      const lookupHash = emailLookupHash(input.email);
       const { rows } = await client.query(
-        "INSERT INTO users(username,password_hash,role,email,phone,full_name,status,is_active,is_locked,failed_login_attempts) VALUES($1,$2,'CUSTOMER',$3,$4,$5,'ACTIVE',TRUE,FALSE,0) RETURNING id",
-        [input.email, passwordHash, input.email, input.phone, input.name],
+        `INSERT INTO users(
+           username,password_hash,role,email,phone,email_encrypted,phone_encrypted,
+           email_lookup_hash,full_name,status,is_active,is_locked,failed_login_attempts
+         ) VALUES($1,$2,'CUSTOMER',NULL,NULL,$3,$4,$5,$6,'ACTIVE',TRUE,FALSE,0)
+         RETURNING id`,
+        [
+          `customer-${crypto.randomUUID()}`,
+          passwordHash,
+          encryptedEmail,
+          encryptedPhone,
+          lookupHash,
+          input.name,
+        ],
       );
       await client.query(
-        "INSERT INTO customers(user_id,full_name,email,phone,is_active) VALUES($1,$2,$3,$4,TRUE)",
-        [rows[0].id, input.name, input.email, input.phone],
+        `INSERT INTO customers(
+           user_id,full_name,email,phone,email_encrypted,phone_encrypted,is_active
+         ) VALUES($1,$2,NULL,NULL,$3,$4,TRUE)`,
+        [rows[0].id, input.name, encryptedEmail, encryptedPhone],
       );
     });
   } catch (error) {
@@ -45,13 +74,31 @@ const registerCustomer = async (input) => {
 const login = (input) =>
   withTransaction(async (client) => {
     const result = await client.query(
-      "SELECT * FROM users WHERE LOWER(email)=LOWER($1) FOR UPDATE",
-      [input.email],
+      `SELECT * FROM users
+       WHERE email_lookup_hash=$1 OR LOWER(email)=LOWER($2)
+       FOR UPDATE`,
+      [emailLookupHash(input.email), input.email],
     );
     const user = result.rows[0];
     if (!user || !user.is_active)
       throw new ErrorHandler("Email hoặc mật khẩu không đúng", 401);
     user.role = user.role?.toLowerCase();
+    if (
+      user.is_locked &&
+      user.locked_until &&
+      new Date(user.locked_until) <= new Date()
+    ) {
+      await client.query(
+        `UPDATE users SET is_locked=FALSE,failed_login_attempts=0,
+           failed_login_count=0,locked_until=NULL,updated_at=NOW()
+         WHERE id=$1`,
+        [user.id],
+      );
+      user.is_locked = false;
+      user.failed_login_attempts = 0;
+      user.failed_login_count = 0;
+      user.locked_until = null;
+    }
     if (
       user.is_locked ||
       (user.locked_until && new Date(user.locked_until) > new Date())
@@ -73,27 +120,80 @@ const login = (input) =>
       loginError.commitTransaction = true;
       throw loginError;
     }
+    if (user.role === "customer") {
+      const profileResult = await client.query(
+        `SELECT * FROM customers WHERE user_id=$1 FOR UPDATE`,
+        [user.id],
+      );
+      const profile = profileResult.rows[0];
+      const email =
+        decryptProfileValue(user.email_encrypted) || user.email || input.email;
+      const phone =
+        decryptProfileValue(user.phone_encrypted) || user.phone || profile?.phone || null;
+      const encryptedEmail =
+        user.email_encrypted || profile?.email_encrypted || encryptProfileValue(email);
+      const encryptedPhone =
+        user.phone_encrypted || profile?.phone_encrypted || encryptProfileValue(phone);
+      await client.query(
+        `UPDATE users SET username=$2,email=NULL,phone=NULL,email_encrypted=$3,
+           phone_encrypted=$4,email_lookup_hash=$5,updated_at=NOW()
+         WHERE id=$1`,
+        [
+          user.id,
+          String(user.username || "").startsWith("customer-")
+            ? user.username
+            : `customer-${crypto.randomUUID()}`,
+          encryptedEmail,
+          encryptedPhone,
+          emailLookupHash(email),
+        ],
+      );
+      if (profile) {
+        await client.query(
+          `UPDATE customers SET email=NULL,phone=NULL,address=NULL,
+             email_encrypted=$2,phone_encrypted=$3,
+             address_encrypted=COALESCE(address_encrypted,$4),
+             cccd_encrypted=COALESCE(cccd_encrypted,$5),updated_at=NOW()
+           WHERE id=$1`,
+          [
+            profile.id,
+            profile.email_encrypted || encryptedEmail,
+            profile.phone_encrypted || encryptedPhone,
+            encryptProfileValue(profile.address),
+            encryptProfileValue(profile.cccd_encrypt),
+          ],
+        );
+      }
+      user.email = email;
+      user.phone = phone;
+    }
     await client.query(
       "UPDATE users SET failed_login_attempts=0,locked_until=NULL,last_login_at=NOW() WHERE id=$1",
       [user.id],
     );
-    const maxDevices = user.role === "customer" ? 2 : 1;
-    const active = await client.query(
-      "SELECT id FROM user_sessions WHERE user_id=$1 AND revoked_at IS NULL AND expires_at>NOW() ORDER BY created_at",
-      [user.id],
-    );
-    const count = Math.max(0, active.rowCount - maxDevices + 1);
-    if (count)
+    const deviceType = normalizeDeviceType(input.deviceType, input.userAgent);
+    if (user.role === "customer") {
       await client.query(
-        "UPDATE user_sessions SET revoked_at=NOW() WHERE id=ANY($1::int[])",
-        [active.rows.slice(0, count).map((row) => row.id)],
+        `UPDATE user_sessions SET revoked_at=NOW()
+         WHERE user_id=$1 AND device_type=$2
+           AND revoked_at IS NULL AND expires_at>NOW()`,
+        [user.id, deviceType],
       );
+    } else {
+      await client.query(
+        `UPDATE user_sessions SET revoked_at=NOW()
+         WHERE user_id=$1 AND revoked_at IS NULL AND expires_at>NOW()`,
+        [user.id],
+      );
+    }
     const session = await client.query(
-      "INSERT INTO user_sessions(user_id,device_id,device_type,user_agent,ip_address,expires_at) VALUES($1,$2,$3,$4,$5,NOW()+INTERVAL '7 days') RETURNING id",
+      `INSERT INTO user_sessions(
+         user_id,device_id,device_type,user_agent,ip_address,last_activity_at,expires_at
+       ) VALUES($1,$2,$3,$4,$5,NOW(),NOW()+INTERVAL '7 days') RETURNING id`,
       [
         user.id,
         input.deviceId || null,
-        input.deviceType || "unknown",
+        deviceType,
         input.userAgent || null,
         input.ipAddress || null,
       ],
@@ -104,7 +204,14 @@ const login = (input) =>
       [session.rows[0].id, hashToken(refreshToken)],
     );
     delete user.password_hash;
-    return { user, accessToken: generateAccessToken(user), refreshToken };
+    delete user.email_encrypted;
+    delete user.phone_encrypted;
+    delete user.email_lookup_hash;
+    return {
+      user,
+      accessToken: generateAccessToken(user, session.rows[0].id),
+      refreshToken,
+    };
   });
 const refresh = async (token) => {
   let payload;
@@ -114,12 +221,16 @@ const refresh = async (token) => {
     throw new ErrorHandler("Refresh token không hợp lệ hoặc đã hết hạn", 401);
   }
   const { rows } = await database.query(
-    "SELECT u.* FROM user_sessions s JOIN users u ON u.id=s.user_id WHERE s.id=$1 AND s.user_id=$2 AND s.refresh_token_hash=$3 AND s.revoked_at IS NULL AND s.expires_at>NOW()",
+    `UPDATE user_sessions s SET last_activity_at=NOW()
+     FROM users u
+     WHERE s.id=$1 AND s.user_id=$2 AND s.refresh_token_hash=$3
+       AND s.revoked_at IS NULL AND s.expires_at>NOW() AND u.id=s.user_id
+     RETURNING u.*`,
     [payload.sessionId, payload.id, hashToken(token)],
   );
   if (!rows[0] || rows[0].is_locked || !rows[0].is_active)
     throw new ErrorHandler("Phiên đăng nhập không còn hiệu lực", 401);
-  return { accessToken: generateAccessToken(rows[0]) };
+  return { accessToken: generateAccessToken(rows[0], payload.sessionId) };
 };
 const logout = async (token) => {
   if (token)

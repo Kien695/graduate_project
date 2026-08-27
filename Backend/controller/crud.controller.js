@@ -20,6 +20,13 @@ const parseImages = (images) => {
 };
 const uploadRequestImages = (table, files) =>
   uploader.uploadMany(files, imageConfig[table]?.folder);
+const auditValues = (table, data) => {
+  if (table !== "customers" || !data) return data;
+  const safe = { ...data };
+  for (const field of ["cccd", "email", "phone", "address"])
+    if (field in safe) safe[field] = "[ENCRYPTED]";
+  return safe;
+};
 
 const makeCrudController = (table) => ({
   list: catchAsyncError(async (req, res) =>
@@ -55,7 +62,7 @@ const makeCrudController = (table) => ({
       action: "CREATE",
       entityType: table,
       entityId: data.id,
-      newValues: data,
+      newValues: auditValues(table, data),
       ipAddress: req.ip,
     });
     return successResponse(res, 201, "Tạo dữ liệu thành công", data);
@@ -79,8 +86,8 @@ const makeCrudController = (table) => ({
       action: "UPDATE",
       entityType: table,
       entityId: data.id,
-      oldValues: old,
-      newValues: data,
+      oldValues: auditValues(table, old),
+      newValues: auditValues(table, data),
       ipAddress: req.ip,
     });
     return successResponse(res, 200, "Cập nhật thành công", data);
@@ -94,7 +101,7 @@ const makeCrudController = (table) => ({
       action: "DELETE",
       entityType: table,
       entityId: req.params.id,
-      oldValues: old,
+      oldValues: auditValues(table, old),
       ipAddress: req.ip,
     });
     return successResponse(res, 200, "Xóa dữ liệu thành công", data);

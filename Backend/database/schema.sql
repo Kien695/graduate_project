@@ -18,8 +18,12 @@ ALTER TABLE users ADD COLUMN IF NOT EXISTS failed_login_attempts INTEGER DEFAULT
 ALTER TABLE users ADD COLUMN IF NOT EXISTS last_login_at TIMESTAMPTZ;
 ALTER TABLE users ADD COLUMN IF NOT EXISTS password_changed_at TIMESTAMPTZ;
 ALTER TABLE users ADD COLUMN IF NOT EXISTS updated_at TIMESTAMPTZ DEFAULT NOW();
+ALTER TABLE users ADD COLUMN IF NOT EXISTS email_encrypted TEXT;
+ALTER TABLE users ADD COLUMN IF NOT EXISTS phone_encrypted TEXT;
+ALTER TABLE users ADD COLUMN IF NOT EXISTS email_lookup_hash CHAR(64);
 UPDATE users SET full_name=COALESCE(full_name,username,email),failed_login_attempts=COALESCE(failed_login_count,failed_login_attempts,0),is_active=UPPER(COALESCE(status,'ACTIVE')) NOT IN ('INACTIVE','DISABLED'),is_locked=COALESCE(is_locked,FALSE) OR locked_until>NOW();
 CREATE UNIQUE INDEX IF NOT EXISTS users_email_unique_ci ON users(LOWER(email)) WHERE email IS NOT NULL;
+CREATE UNIQUE INDEX IF NOT EXISTS users_email_lookup_hash_unique ON users(email_lookup_hash) WHERE email_lookup_hash IS NOT NULL;
 
 CREATE TABLE IF NOT EXISTS employees (
   id SERIAL PRIMARY KEY,
@@ -38,7 +42,10 @@ CREATE UNIQUE INDEX IF NOT EXISTS employees_code_unique_ci ON employees(LOWER(em
 CREATE UNIQUE INDEX IF NOT EXISTS employees_email_unique_ci ON employees(LOWER(email));
 
 CREATE TABLE IF NOT EXISTS user_sessions (id SERIAL PRIMARY KEY,user_id INTEGER NOT NULL REFERENCES users(id) ON DELETE CASCADE,refresh_token_hash CHAR(64),device_id VARCHAR(255),device_type VARCHAR(30) DEFAULT 'unknown',user_agent TEXT,ip_address INET,expires_at TIMESTAMPTZ NOT NULL,revoked_at TIMESTAMPTZ,created_at TIMESTAMPTZ DEFAULT NOW());
+ALTER TABLE user_sessions ADD COLUMN IF NOT EXISTS last_activity_at TIMESTAMPTZ DEFAULT NOW();
+UPDATE user_sessions SET device_type=UPPER(device_type),last_activity_at=COALESCE(last_activity_at,created_at,NOW());
 CREATE INDEX IF NOT EXISTS user_sessions_user_active_idx ON user_sessions(user_id,revoked_at);
+CREATE INDEX IF NOT EXISTS user_sessions_user_device_active_idx ON user_sessions(user_id,device_type,revoked_at);
 
 CREATE TABLE IF NOT EXISTS customers (id SERIAL PRIMARY KEY,user_id INTEGER REFERENCES users(id),full_name VARCHAR(150),created_at TIMESTAMP DEFAULT NOW());
 ALTER TABLE customers ADD COLUMN IF NOT EXISTS email VARCHAR(255);
@@ -47,6 +54,10 @@ ALTER TABLE customers ADD COLUMN IF NOT EXISTS address TEXT;
 ALTER TABLE customers ADD COLUMN IF NOT EXISTS encrypted_profile TEXT;
 ALTER TABLE customers ADD COLUMN IF NOT EXISTS is_active BOOLEAN DEFAULT TRUE;
 ALTER TABLE customers ADD COLUMN IF NOT EXISTS updated_at TIMESTAMPTZ DEFAULT NOW();
+ALTER TABLE customers ADD COLUMN IF NOT EXISTS cccd_encrypted TEXT;
+ALTER TABLE customers ADD COLUMN IF NOT EXISTS email_encrypted TEXT;
+ALTER TABLE customers ADD COLUMN IF NOT EXISTS phone_encrypted TEXT;
+ALTER TABLE customers ADD COLUMN IF NOT EXISTS address_encrypted TEXT;
 
 CREATE TABLE IF NOT EXISTS vehicles (id SERIAL PRIMARY KEY,brand VARCHAR(80),model VARCHAR(100),manufacture_year INTEGER,color VARCHAR(50),price NUMERIC(15,2),status VARCHAR(30),created_at TIMESTAMP DEFAULT NOW());
 ALTER TABLE vehicles ADD COLUMN IF NOT EXISTS vin VARCHAR(50);
@@ -99,7 +110,14 @@ ALTER TABLE inspections ADD COLUMN IF NOT EXISTS notes TEXT;
 ALTER TABLE inspections ADD COLUMN IF NOT EXISTS inspected_at TIMESTAMPTZ;
 ALTER TABLE inspections ADD COLUMN IF NOT EXISTS created_at TIMESTAMPTZ DEFAULT NOW();
 ALTER TABLE inspections ADD COLUMN IF NOT EXISTS updated_at TIMESTAMPTZ DEFAULT NOW();
-UPDATE inspections SET status=CASE WHEN LOWER(result) IN ('pass','passed') THEN 'passed' WHEN LOWER(result) IN ('fail','failed') THEN 'failed' ELSE COALESCE(status,'pending') END,notes=COALESCE(notes,note),created_at=COALESCE(inspection_date,created_at);
+UPDATE inspections SET status=CASE WHEN LOWER(result) IN ('pass','passed') THEN 'passed' WHEN LOWER(result) IN ('fail','failed') THEN 'failed' ELSE COALESCE(status,'pending') END,notes=COALESCE(notes,note),created_at=COALESCE(inspection_date,created_at)
+WHERE vehicle_id IS NOT NULL AND order_id IS NOT NULL AND contract_id IS NOT NULL;
+ALTER TABLE inspections DROP CONSTRAINT IF EXISTS inspections_vehicle_required;
+ALTER TABLE inspections ADD CONSTRAINT inspections_vehicle_required CHECK (vehicle_id IS NOT NULL) NOT VALID;
+ALTER TABLE inspections DROP CONSTRAINT IF EXISTS inspections_order_required;
+ALTER TABLE inspections ADD CONSTRAINT inspections_order_required CHECK (order_id IS NOT NULL) NOT VALID;
+ALTER TABLE inspections DROP CONSTRAINT IF EXISTS inspections_contract_required;
+ALTER TABLE inspections ADD CONSTRAINT inspections_contract_required CHECK (contract_id IS NOT NULL) NOT VALID;
 
 CREATE TABLE IF NOT EXISTS inspection_images (id SERIAL PRIMARY KEY,inspection_id INTEGER REFERENCES inspections(id) ON DELETE CASCADE,image_url TEXT);
 ALTER TABLE inspection_images ADD COLUMN IF NOT EXISTS url TEXT;
