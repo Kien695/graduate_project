@@ -105,9 +105,9 @@ export default function ProfilePage() {
     </section>
 
     <div className="grid gap-6 lg:grid-cols-2">
-      <form onSubmit={saveProfile} className="rounded-2xl border border-slate-200 bg-white p-6 shadow-sm">
-        <h2 className="text-lg font-black text-slate-900">Thông tin cá nhân</h2>
-        <p className="mt-1 text-xs text-slate-500">Dữ liệu được tải trực tiếp từ tài khoản đang xác thực.</p>
+      <form onSubmit={saveProfile} className="rounded-2xl border border-slate-200 bg-white p-6 shadow-sm dark:border-slate-700 dark:bg-slate-800">
+        <h2 className="text-lg font-black text-slate-900 dark:text-white">Thông tin cá nhân</h2>
+        <p className="mt-1 text-xs text-slate-500 dark:text-slate-400">Dữ liệu được tải trực tiếp từ tài khoản đang xác thực.</p>
         <div className="mt-5 space-y-4">
           <Field label="Họ và tên" value={profile.fullName} onChange={update("fullName")} required />
           <Field label="Email" type="email" value={profile.email} onChange={update("email")} required />
@@ -118,9 +118,9 @@ export default function ProfilePage() {
         <button disabled={saving} className="mt-6 w-full rounded-xl bg-blue-600 py-3 text-sm font-bold text-white disabled:opacity-60">{saving ? "Đang lưu..." : "Lưu thay đổi"}</button>
       </form>
 
-      <form onSubmit={changePassword} className="h-fit rounded-2xl border border-slate-200 bg-white p-6 shadow-sm">
-        <h2 className="text-lg font-black text-slate-900">Đổi mật khẩu</h2>
-        <p className="mt-1 text-xs text-slate-500">Sau khi đổi mật khẩu, tất cả phiên đăng nhập sẽ bị thu hồi.</p>
+      <form onSubmit={changePassword} className="h-fit rounded-2xl border border-slate-200 bg-white p-6 shadow-sm dark:border-slate-700 dark:bg-slate-800">
+        <h2 className="text-lg font-black text-slate-900 dark:text-white">Đổi mật khẩu</h2>
+        <p className="mt-1 text-xs text-slate-500 dark:text-slate-400">Sau khi đổi mật khẩu, tất cả phiên đăng nhập sẽ bị thu hồi.</p>
         <div className="mt-5 space-y-4">
           <Field label="Mật khẩu hiện tại" type="password" value={password.currentPassword} onChange={(event) => setPassword({ ...password, currentPassword: event.target.value })} required />
           <Field label="Mật khẩu mới" type="password" value={password.newPassword} onChange={(event) => setPassword({ ...password, newPassword: event.target.value })} minLength={8} required />
@@ -133,5 +133,5 @@ export default function ProfilePage() {
 }
 
 function Field({ label, ...props }) {
-  return <label className="block"><span className="mb-1.5 block text-xs font-bold text-slate-600">{label}</span><input {...props} className="form-control disabled:bg-slate-100 disabled:text-slate-500" /></label>;
+  return <label className="block"><span className="mb-1.5 block text-xs font-bold text-slate-600 dark:text-slate-300">{label}</span><input {...props} className="form-control disabled:bg-slate-100 disabled:text-slate-500 dark:disabled:bg-slate-900 dark:disabled:text-slate-500" /></label>;
 }

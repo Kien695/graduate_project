@@ -2,8 +2,8 @@ import LoginForm from "../../components/auth/LoginForm";
 import showroom from "../../assets/showroom-login.png";
 export default function LoginPage() {
   return (
-    <main className="min-h-screen bg-slate-100 p-0 sm:p-5 lg:p-8">
-      <section className="mx-auto grid min-h-[calc(100vh-4rem)] max-w-6xl overflow-hidden bg-white shadow-2xl shadow-slate-300/50 sm:rounded-3xl lg:grid-cols-[1.05fr_.95fr]">
+    <main className="min-h-screen bg-slate-100 p-0 dark:bg-slate-950 sm:p-5 lg:p-8">
+      <section className="mx-auto grid min-h-[calc(100vh-4rem)] max-w-6xl overflow-hidden bg-white shadow-2xl shadow-slate-300/50 dark:bg-slate-900 dark:shadow-none sm:rounded-3xl lg:grid-cols-[1.05fr_.95fr]">
         <div className="relative hidden overflow-hidden lg:block">
           <img
             src={showroom}

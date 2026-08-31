@@ -71,7 +71,7 @@ export default function InspectionManager() {
         <thead className="table-head"><tr>{["Mã kiểm định", "Xe", "Đơn hàng", "Người kiểm định", "Ngày kiểm định", "Kết quả", "Thao tác"].map((heading) => <th key={heading}>{heading}</th>)}</tr></thead>
         <tbody className="table-body">
           {filtered.slice((page - 1) * 7, page * 7).map((inspection) => <tr key={inspection.id}>
-            <td className="font-bold text-slate-900">KD{String(inspection.id).padStart(5, "0")}</td>
+            <td className="font-bold text-slate-900 dark:text-white">KD{String(inspection.id).padStart(5, "0")}</td>
             <td><div className="font-semibold">{inspection.brand} {inspection.model}</div><div className="text-xs text-slate-400">{inspection.vin || `Xe #${inspection.vehicle_id}`}</div></td>
             <td>{inspection.order_number ? `DH${String(inspection.order_number).padStart(5, "0")}` : "—"}</td>
             <td>{inspection.inspector_name || `NV #${inspection.inspector_id}`}</td>
@@ -87,10 +87,10 @@ export default function InspectionManager() {
 
     <Modal open={formOpen} onClose={() => setFormOpen(false)} title="Thêm phiếu kiểm định">
       <form onSubmit={submitInspection} className="space-y-5">
-        <label className="block text-xs font-bold text-slate-700">Hợp đồng / đơn hàng / xe *<select required disabled={contractsLoading} className="form-control mt-2" value={form.contract_id} onChange={(event) => { const contract = contracts.find((item) => String(item.id) === event.target.value); setForm({ ...form, contract_id: event.target.value, order_id: contract?.order_id || "", vehicle_id: contract?.vehicle_id || "" }); }}><option value="">{contractsLoading ? "Đang tải hợp đồng..." : "Chọn hợp đồng"}</option>{contracts.filter((contract) => String(contract.status).toLowerCase() !== "cancelled").map((contract) => <option key={contract.id} value={contract.id}>{contract.contract_number} · DH{String(contract.order_id).padStart(5, "0")} · {[contract.vehicle_brand, contract.vehicle_model, contract.vin].filter(Boolean).join(" ")}</option>)}</select></label>
-        {form.contract_id && <div className="rounded-xl bg-slate-50 p-3 text-xs text-slate-600">Contract #{form.contract_id} · Order #{form.order_id} · Vehicle #{form.vehicle_id}</div>}
-        <label className="block text-xs font-bold text-slate-700">Ghi chú<textarea rows="4" className="form-control mt-2" placeholder="Nhập nội dung cần lưu ý khi kiểm định..." value={form.notes} onChange={(event) => setForm({ ...form, notes: event.target.value })} /></label>
-        <div className="rounded-xl bg-blue-50 p-3 text-xs leading-5 text-blue-700">Người kiểm định được xác định tự động từ tài khoản Staff/Admin đang đăng nhập. Phiếu mới có trạng thái chờ kiểm định.</div>
+        <label className="block text-xs font-bold text-slate-700 dark:text-slate-300">Hợp đồng / đơn hàng / xe *<select required disabled={contractsLoading} className="form-control mt-2" value={form.contract_id} onChange={(event) => { const contract = contracts.find((item) => String(item.id) === event.target.value); setForm({ ...form, contract_id: event.target.value, order_id: contract?.order_id || "", vehicle_id: contract?.vehicle_id || "" }); }}><option value="">{contractsLoading ? "Đang tải hợp đồng..." : "Chọn hợp đồng"}</option>{contracts.filter((contract) => String(contract.status).toLowerCase() !== "cancelled").map((contract) => <option key={contract.id} value={contract.id}>{contract.contract_number} · DH{String(contract.order_id).padStart(5, "0")} · {[contract.vehicle_brand, contract.vehicle_model, contract.vin].filter(Boolean).join(" ")}</option>)}</select></label>
+        {form.contract_id && <div className="rounded-xl bg-slate-50 p-3 text-xs text-slate-600 dark:bg-slate-900 dark:text-slate-300">Contract #{form.contract_id} · Order #{form.order_id} · Vehicle #{form.vehicle_id}</div>}
+        <label className="block text-xs font-bold text-slate-700 dark:text-slate-300">Ghi chú<textarea rows="4" className="form-control mt-2" placeholder="Nhập nội dung cần lưu ý khi kiểm định..." value={form.notes} onChange={(event) => setForm({ ...form, notes: event.target.value })} /></label>
+        <div className="rounded-xl bg-blue-50 p-3 text-xs leading-5 text-blue-700 dark:bg-blue-950/30 dark:text-blue-400">Người kiểm định được xác định tự động từ tài khoản Staff/Admin đang đăng nhập. Phiếu mới có trạng thái chờ kiểm định.</div>
         <button disabled={submitting || contractsLoading} className="w-full rounded-xl bg-blue-600 py-3 text-sm font-bold text-white disabled:opacity-50">{submitting ? "Đang tạo..." : "Tạo phiếu kiểm định"}</button>
       </form>
     </Modal>

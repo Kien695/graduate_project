@@ -102,24 +102,24 @@ export default function InspectionDetailModal({ inspection, loading, onClose, on
       </div>
 
       <section>
-        <div className="mb-3 flex items-center justify-between"><div><h3 className="font-bold text-slate-900">Checklist kiểm tra</h3><p className="mt-1 text-xs text-slate-500">{status === "pending" ? "Tick hạng mục đầu tiên để tự động bắt đầu kiểm định." : "Đánh dấu và ghi chú từng hạng mục khi đang kiểm định."}</p></div><span className="text-xs font-bold text-slate-500">{checklist.filter((item) => item.checked).length}/{checklist.length} hoàn tất</span></div>
-        <div className="overflow-hidden rounded-2xl border border-slate-200">
-          {checklist.map((item, index) => <div key={item.key} className="grid gap-3 border-b border-slate-100 p-4 last:border-0 md:grid-cols-[1fr_1.2fr]">
-            <label className="flex cursor-pointer items-center gap-3 text-sm font-semibold text-slate-800"><input type="checkbox" className="h-4 w-4 cursor-pointer accent-blue-600 disabled:cursor-not-allowed" disabled={submitting || !["pending", "checking"].includes(status)} checked={Boolean(item.checked)} onChange={(event) => toggleChecklistItem(index, event.target.checked)} />{item.label}</label>
+        <div className="mb-3 flex items-center justify-between"><div><h3 className="font-bold text-slate-900 dark:text-white">Checklist kiểm tra</h3><p className="mt-1 text-xs text-slate-500 dark:text-slate-400">{status === "pending" ? "Tick hạng mục đầu tiên để tự động bắt đầu kiểm định." : "Đánh dấu và ghi chú từng hạng mục khi đang kiểm định."}</p></div><span className="text-xs font-bold text-slate-500 dark:text-slate-400">{checklist.filter((item) => item.checked).length}/{checklist.length} hoàn tất</span></div>
+        <div className="overflow-hidden rounded-2xl border border-slate-200 dark:border-slate-700">
+          {checklist.map((item, index) => <div key={item.key} className="grid gap-3 border-b border-slate-100 p-4 last:border-0 dark:border-slate-700 md:grid-cols-[1fr_1.2fr]">
+            <label className="flex cursor-pointer items-center gap-3 text-sm font-semibold text-slate-800 dark:text-slate-200"><input type="checkbox" className="h-4 w-4 cursor-pointer accent-blue-600 disabled:cursor-not-allowed" disabled={submitting || !["pending", "checking"].includes(status)} checked={Boolean(item.checked)} onChange={(event) => toggleChecklistItem(index, event.target.checked)} />{item.label}</label>
             <input disabled={submitting || status !== "checking"} className="form-control" placeholder={status === "pending" ? "Tick một hạng mục để bắt đầu trước" : "Ghi chú hạng mục"} value={item.note || ""} onChange={(event) => updateItem(index, { note: event.target.value })} />
           </div>)}
         </div>
       </section>
 
-      <section><h3 className="mb-2 font-bold text-slate-900">Ghi chú chung</h3><textarea rows="4" disabled={status !== "checking"} className="form-control" value={notes} onChange={(event) => setNotes(event.target.value)} placeholder="Kết luận và lưu ý kiểm định..." /></section>
+      <section><h3 className="mb-2 font-bold text-slate-900 dark:text-white">Ghi chú chung</h3><textarea rows="4" disabled={status !== "checking"} className="form-control" value={notes} onChange={(event) => setNotes(event.target.value)} placeholder="Kết luận và lưu ý kiểm định..." /></section>
 
       <section>
         <h3 className="mb-3 font-bold text-slate-900">Hình ảnh kiểm định</h3>
-        <div className="grid grid-cols-2 gap-3 sm:grid-cols-3 lg:grid-cols-4">{inspection.images?.map((image) => <div key={image.id} className="relative overflow-hidden rounded-xl border border-slate-200 bg-slate-50"><a href={image.url} target="_blank" rel="noreferrer"><img src={image.url} alt="Ảnh kiểm định" className="h-32 w-full object-cover" /></a><button type="button" onClick={() => removeImage(image.id)} className="absolute right-2 top-2 rounded bg-rose-600 px-2 py-1 text-xs font-bold text-white">Xóa</button></div>)}{!inspection.images?.length && <div className="col-span-full rounded-xl border border-dashed border-slate-200 py-10 text-center text-sm text-slate-400">Chưa có ảnh kiểm định</div>}</div>
-        <div className="mt-4 flex flex-col gap-3 rounded-xl bg-slate-50 p-4 sm:flex-row sm:items-center"><input multiple accept="image/jpeg,image/png,image/webp" type="file" className="block flex-1 text-sm text-slate-600" onChange={(event) => setFiles([...event.target.files])} /><button type="button" disabled={submitting || !files.length} onClick={upload} className="rounded-xl bg-blue-600 px-5 py-2.5 text-sm font-bold text-white disabled:opacity-50">Upload ảnh</button></div>
+        <div className="grid grid-cols-2 gap-3 sm:grid-cols-3 lg:grid-cols-4">{inspection.images?.map((image) => <div key={image.id} className="relative overflow-hidden rounded-xl border border-slate-200 bg-slate-50 dark:border-slate-700 dark:bg-slate-900"><a href={image.url} target="_blank" rel="noreferrer"><img src={image.url} alt="Ảnh kiểm định" className="h-32 w-full object-cover" /></a><button type="button" onClick={() => removeImage(image.id)} className="absolute right-2 top-2 rounded bg-rose-600 px-2 py-1 text-xs font-bold text-white">Xóa</button></div>)}{!inspection.images?.length && <div className="col-span-full rounded-xl border border-dashed border-slate-200 py-10 text-center text-sm text-slate-400 dark:border-slate-700">Chưa có ảnh kiểm định</div>}</div>
+        <div className="mt-4 flex flex-col gap-3 rounded-xl bg-slate-50 p-4 sm:flex-row sm:items-center dark:bg-slate-900"><input multiple accept="image/jpeg,image/png,image/webp" type="file" className="block flex-1 text-sm text-slate-600 dark:text-slate-300" onChange={(event) => setFiles([...event.target.files])} /><button type="button" disabled={submitting || !files.length} onClick={upload} className="rounded-xl bg-blue-600 px-5 py-2.5 text-sm font-bold text-white disabled:opacity-50">Upload ảnh</button></div>
       </section>
 
-      <div className="flex flex-wrap justify-end gap-3 border-t border-slate-100 pt-5">
+      <div className="flex flex-wrap justify-end gap-3 border-t border-slate-100 pt-5 dark:border-slate-700">
         {status === "pending" && <button type="button" disabled={submitting} onClick={() => run(startInspection, undefined, "Đã bắt đầu kiểm định")} className="rounded-xl bg-blue-600 px-5 py-2.5 text-sm font-bold text-white disabled:cursor-not-allowed disabled:opacity-50">Bắt đầu kiểm định</button>}
         {status === "checking" && <><button type="button" disabled={submitting} onClick={saveChecklist} className="rounded-xl bg-blue-600 px-5 py-2.5 text-sm font-bold text-white disabled:cursor-not-allowed disabled:opacity-50">Lưu checklist</button><button type="button" disabled={submitting} onClick={() => finish("fail")} className="rounded-xl bg-rose-600 px-5 py-2.5 text-sm font-bold text-white disabled:cursor-not-allowed disabled:opacity-50">Hoàn thành FAIL</button><button type="button" disabled={submitting} onClick={() => finish("pass")} className="rounded-xl bg-emerald-600 px-5 py-2.5 text-sm font-bold text-white disabled:cursor-not-allowed disabled:opacity-50">Hoàn thành PASS</button></>}
       </div>
@@ -128,5 +128,5 @@ export default function InspectionDetailModal({ inspection, loading, onClose, on
 }
 
 function Info({ label, value }) {
-  return <div className="rounded-xl bg-slate-50 p-3"><div className="text-[10px] font-bold uppercase tracking-wide text-slate-400">{label}</div><div className="mt-1 text-sm font-bold capitalize text-slate-800">{value || "—"}</div></div>;
+  return <div className="rounded-xl bg-slate-50 p-3 dark:bg-slate-900"><div className="text-[10px] font-bold uppercase tracking-wide text-slate-400">{label}</div><div className="mt-1 text-sm font-bold capitalize text-slate-800 dark:text-slate-100">{value || "—"}</div></div>;
 }

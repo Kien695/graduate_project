@@ -51,12 +51,12 @@ export default function LoginForm() {
           <div className="grid h-11 w-11 place-items-center rounded-xl bg-blue-600 text-white">
             <Icon name="car" />
           </div>
-          <span className="font-black text-slate-950">AUTO DEALER</span>
+          <span className="font-black text-slate-950 dark:text-white">AUTO DEALER</span>
         </div>
         <p className="text-xs font-bold uppercase tracking-[.2em] text-blue-600">
           Chào mừng trở lại
         </p>
-        <h1 className="mt-3 text-3xl font-black tracking-tight text-slate-950">
+        <h1 className="mt-3 text-3xl font-black tracking-tight text-slate-950 dark:text-white">
           Đăng nhập
         </h1>
         <p className="mt-2 text-sm text-slate-500">
@@ -65,7 +65,7 @@ export default function LoginForm() {
       </div>
       <div className="space-y-5">
         <label className="block">
-          <span className="mb-2 block text-sm font-semibold text-slate-700">
+          <span className="mb-2 block text-sm font-semibold text-slate-700 dark:text-slate-300">
             Email
           </span>
           <input
@@ -73,11 +73,11 @@ export default function LoginForm() {
             value={email}
             onChange={(e) => setEmail(e.target.value)}
             placeholder="admin@autodealer.com"
-            className="w-full rounded-xl border border-slate-200 px-4 py-3.5 text-sm outline-none transition focus:border-blue-500 focus:ring-4 focus:ring-blue-50"
+            className="w-full rounded-xl border border-slate-200 px-4 py-3.5 text-sm outline-none transition focus:border-blue-500 focus:ring-4 focus:ring-blue-50 dark:border-slate-700 dark:bg-slate-800 dark:text-slate-100 dark:focus:ring-blue-950"
           />
         </label>
         <label className="block">
-          <span className="mb-2 block text-sm font-semibold text-slate-700">
+          <span className="mb-2 block text-sm font-semibold text-slate-700 dark:text-slate-300">
             Mật khẩu
           </span>
           <div className="relative">
@@ -86,7 +86,7 @@ export default function LoginForm() {
               value={password}
               onChange={(e) => setPassword(e.target.value)}
               placeholder="Nhập mật khẩu"
-              className="w-full rounded-xl border border-slate-200 px-4 py-3.5 pr-12 text-sm outline-none transition focus:border-blue-500 focus:ring-4 focus:ring-blue-50"
+              className="w-full rounded-xl border border-slate-200 px-4 py-3.5 pr-12 text-sm outline-none transition focus:border-blue-500 focus:ring-4 focus:ring-blue-50 dark:border-slate-700 dark:bg-slate-800 dark:text-slate-100 dark:focus:ring-blue-950"
             />
             <button
               type="button"
