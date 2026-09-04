@@ -55,7 +55,10 @@ const makeCrudController = (table) => ({
     let uploaded = [];
     let data;
     try {
-      uploaded = storageQuota.tagImages(await uploadRequestImages(table, files), reservation);
+      uploaded = storageQuota.tagImages(
+        await uploadRequestImages(table, files),
+        reservation,
+      );
       data = await crud.create(table, {
         ...req.body,
         ...(uploaded.length ? { images: JSON.stringify(uploaded) } : {}),
@@ -87,7 +90,10 @@ const makeCrudController = (table) => ({
     let uploaded = [];
     let data;
     try {
-      uploaded = storageQuota.tagImages(await uploadRequestImages(table, files), reservation);
+      uploaded = storageQuota.tagImages(
+        await uploadRequestImages(table, files),
+        reservation,
+      );
       const images = [...parseImages(old.images), ...uploaded];
       data = await crud.update(table, req.params.id, {
         ...req.body,
@@ -113,9 +119,11 @@ const makeCrudController = (table) => ({
   }),
   remove: catchAsyncError(async (req, res) => {
     const old = await crud.get(table, req.params.id);
-    if (imageConfig[table]) await uploader.destroyImages(parseImages(old.images));
+    if (imageConfig[table])
+      await uploader.destroyImages(parseImages(old.images));
     const data = await crud.remove(table, req.params.id);
-    if (imageConfig[table]) await storageQuota.releaseImages(parseImages(old.images));
+    if (imageConfig[table])
+      await storageQuota.releaseImages(parseImages(old.images));
     await audit.record(null, {
       userId: req.user?.id,
       action: "DELETE",
@@ -137,7 +145,9 @@ const makeCrudController = (table) => ({
     }
     await uploader.destroyImage(image.public_id);
     const data = await crud.update(table, req.params.id, {
-      images: JSON.stringify(images.filter((item) => item.public_id !== image.public_id)),
+      images: JSON.stringify(
+        images.filter((item) => item.public_id !== image.public_id),
+      ),
     });
     await storageQuota.releaseImages([image]);
     await audit.record(null, {

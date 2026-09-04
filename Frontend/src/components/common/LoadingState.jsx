@@ -1,1 +1,7 @@
-export default function LoadingState(){return <div className="flex h-48 items-center justify-center"><span className="h-8 w-8 animate-spin rounded-full border-4 border-blue-100 border-t-blue-600 dark:border-slate-700 dark:border-t-blue-500"/></div>}
+export default function LoadingState() {
+  return (
+    <div className="flex h-48 items-center justify-center">
+      <span className="h-8 w-8 animate-spin rounded-full border-4 border-blue-100 border-t-blue-600 dark:border-slate-700 dark:border-t-blue-500" />
+    </div>
+  );
+}

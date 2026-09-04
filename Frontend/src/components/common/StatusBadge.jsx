@@ -16,9 +16,19 @@ const colors = {
   active: "bg-emerald-50 text-emerald-700",
   out_of_stock: "bg-rose-50 text-rose-700",
 };
-const labels = { active: "ACTIVE", inactive: "INACTIVE", out_of_stock: "OUT_OF_STOCK" };
+const labels = {
+  active: "ACTIVE",
+  inactive: "INACTIVE",
+  out_of_stock: "OUT_OF_STOCK",
+};
 
 export default function StatusBadge({ value }) {
   const key = String(value || "unknown").toLowerCase();
-  return <span className={`inline-flex rounded-full px-2.5 py-1 text-[11px] font-bold ${colors[key] || "bg-blue-50 text-blue-700"}`}>{labels[key] || value || "—"}</span>;
+  return (
+    <span
+      className={`inline-flex rounded-full px-2.5 py-1 text-[11px] font-bold ${colors[key] || "bg-blue-50 text-blue-700"}`}
+    >
+      {labels[key] || value || "—"}
+    </span>
+  );
 }

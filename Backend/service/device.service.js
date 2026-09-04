@@ -25,9 +25,15 @@ const check = async (user) => {
     [user.id],
   );
   const byType = Object.fromEntries(
-    rows.map((row) => [String(row.device_type).toUpperCase(), row.active_devices]),
+    rows.map((row) => [
+      String(row.device_type).toUpperCase(),
+      row.active_devices,
+    ]),
   );
-  const activeDevices = rows.reduce((total, row) => total + row.active_devices, 0);
+  const activeDevices = rows.reduce(
+    (total, row) => total + row.active_devices,
+    0,
+  );
   return {
     activeDevices,
     activeByType: byType,

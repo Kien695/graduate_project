@@ -5,7 +5,8 @@ const BYTES_PER_MB = 1024 * 1024;
 const DEFAULT_QUOTA_MB = Number(process.env.CUSTOMER_STORAGE_QUOTA_MB || 500);
 
 const toMb = (bytes) => Number(bytes || 0) / BYTES_PER_MB;
-const isCustomer = (user) => String(user?.role || "").toLowerCase() === "customer";
+const isCustomer = (user) =>
+  String(user?.role || "").toLowerCase() === "customer";
 
 const ensureForCustomer = async (customerId, executor = database) => {
   const { rows } = await executor.query(
@@ -25,7 +26,8 @@ const reserveForUser = async (user, bytes, executor = database) => {
     "SELECT id FROM customers WHERE user_id=$1 AND is_active=TRUE LIMIT 1",
     [user.id],
   );
-  if (!customer.rows[0]) throw new ErrorHandler("Khong tim thay ho so khach hang", 404);
+  if (!customer.rows[0])
+    throw new ErrorHandler("Khong tim thay ho so khach hang", 404);
   const customerId = customer.rows[0].id;
   await ensureForCustomer(customerId, executor);
   const { rows } = await executor.query(
@@ -35,7 +37,11 @@ const reserveForUser = async (user, bytes, executor = database) => {
      RETURNING *`,
     [customerId, toMb(normalizedBytes)],
   );
-  if (!rows[0]) throw new ErrorHandler("Dung luong luu tru cua khach hang da vuot quota", 413);
+  if (!rows[0])
+    throw new ErrorHandler(
+      "Dung luong luu tru cua khach hang da vuot quota",
+      413,
+    );
   return { customerId, bytes: normalizedBytes, storage: rows[0] };
 };
 
@@ -50,24 +56,32 @@ const release = async (customerId, bytes, executor = database) => {
 };
 
 const releaseReservation = (reservation, executor = database) =>
-  reservation ? release(reservation.customerId, reservation.bytes, executor) : Promise.resolve();
+  reservation
+    ? release(reservation.customerId, reservation.bytes, executor)
+    : Promise.resolve();
 
 const releaseImages = async (images = [], executor = database) => {
   const totals = new Map();
   for (const image of images) {
-    if (!image?.customer_id || Number(image.bytes || image.size_bytes || 0) <= 0) continue;
+    if (
+      !image?.customer_id ||
+      Number(image.bytes || image.size_bytes || 0) <= 0
+    )
+      continue;
     totals.set(
       image.customer_id,
-      (totals.get(image.customer_id) || 0) + Number(image.bytes || image.size_bytes),
+      (totals.get(image.customer_id) || 0) +
+        Number(image.bytes || image.size_bytes),
     );
   }
-  for (const [customerId, bytes] of totals) await release(customerId, bytes, executor);
+  for (const [customerId, bytes] of totals)
+    await release(customerId, bytes, executor);
 };
 
 const tagImages = (images, reservation) =>
-  images.map((image) => reservation
-    ? { ...image, customer_id: reservation.customerId }
-    : image);
+  images.map((image) =>
+    reservation ? { ...image, customer_id: reservation.customerId } : image,
+  );
 
 module.exports = {
   DEFAULT_QUOTA_MB,

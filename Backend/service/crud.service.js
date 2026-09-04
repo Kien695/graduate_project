@@ -6,7 +6,7 @@ const {
   emailLookupHash,
 } = require("../utils/profileEncryption");
 const storageQuota = require("./storageQuota.service");
-const notification = require('./notification.service');
+const notification = require("./notification.service");
 
 const configs = {
   customers: {
@@ -37,7 +37,9 @@ const configs = {
       "images",
     ],
   },
-  accessories: { fields: ["name", "sku", "price", "stock", "is_active", "images"] },
+  accessories: {
+    fields: ["name", "sku", "price", "stock", "is_active", "images"],
+  },
 };
 const config = (table) =>
   configs[table] ||
@@ -50,9 +52,15 @@ const validateInput = (table, input) => {
     throw new ErrorHandler("Tên phụ kiện không được để trống", 400);
   if (input.sku !== undefined && !String(input.sku).trim())
     throw new ErrorHandler("Mã SKU không được để trống", 400);
-  if (input.price !== undefined && (!Number.isFinite(Number(input.price)) || Number(input.price) < 0))
+  if (
+    input.price !== undefined &&
+    (!Number.isFinite(Number(input.price)) || Number(input.price) < 0)
+  )
     throw new ErrorHandler("Giá phụ kiện không hợp lệ", 400);
-  if (input.stock !== undefined && (!Number.isInteger(Number(input.stock)) || Number(input.stock) < 0))
+  if (
+    input.stock !== undefined &&
+    (!Number.isInteger(Number(input.stock)) || Number(input.stock) < 0)
+  )
     throw new ErrorHandler("Số lượng tồn kho phải là số nguyên không âm", 400);
 };
 const prepareInput = (table, input) => {
@@ -69,7 +77,11 @@ const prepareInput = (table, input) => {
 const present = (table, row) =>
   table === "customers" ? decryptCustomerProfile(row) : row;
 const syncCustomerUser = async (client, customer, source) => {
-  if (!customer.user_id || (source.email === undefined && source.phone === undefined)) return;
+  if (
+    !customer.user_id ||
+    (source.email === undefined && source.phone === undefined)
+  )
+    return;
   await client.query(
     `UPDATE users SET
        email=CASE WHEN $2::boolean THEN NULL ELSE email END,
@@ -78,9 +90,14 @@ const syncCustomerUser = async (client, customer, source) => {
        phone=CASE WHEN $5::boolean THEN NULL ELSE phone END,
        phone_encrypted=CASE WHEN $5::boolean THEN $6 ELSE phone_encrypted END,
        updated_at=NOW() WHERE id=$1`,
-    [customer.user_id,source.email !== undefined,customer.email_encrypted,
+    [
+      customer.user_id,
+      source.email !== undefined,
+      customer.email_encrypted,
       source.email !== undefined ? emailLookupHash(source.email) : null,
-      source.phone !== undefined,customer.phone_encrypted],
+      source.phone !== undefined,
+      customer.phone_encrypted,
+    ],
   );
 };
 const list = async (table, query = {}) => {
@@ -149,18 +166,20 @@ const update = async (table, id, input) => {
   const sets = fields.map((f, i) => `${f}=$${i + 2}`);
   return withTransaction(async (client) => {
     const { rows } = await client.query(
-    `UPDATE ${table} SET ${sets.join(",")},updated_at=NOW() WHERE id=$1 RETURNING *`,
-    [id, ...values],
-  );
-  if (!rows[0]) throw new ErrorHandler("Không tìm thấy dữ liệu", 404);
+      `UPDATE ${table} SET ${sets.join(",")},updated_at=NOW() WHERE id=$1 RETURNING *`,
+      [id, ...values],
+    );
+    if (!rows[0]) throw new ErrorHandler("Không tìm thấy dữ liệu", 404);
     if (table === "customers") {
       await syncCustomerUser(client, rows[0], source);
-      if (rows[0].user_id) await notification.create(client, {
-        userId: rows[0].user_id,
-        title: 'Thông tin cá nhân đã được cập nhật',
-        message: 'Quản trị viên vừa cập nhật thông tin khách hàng của bạn.',
-        type: 'CUSTOMER', referenceId: rows[0].id,
-      });
+      if (rows[0].user_id)
+        await notification.create(client, {
+          userId: rows[0].user_id,
+          title: "Thông tin cá nhân đã được cập nhật",
+          message: "Quản trị viên vừa cập nhật thông tin khách hàng của bạn.",
+          type: "CUSTOMER",
+          referenceId: rows[0].id,
+        });
     }
     return present(table, rows[0]);
   });

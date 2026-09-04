@@ -34,7 +34,14 @@ const action = (status) =>
       await service.transition(req.params.id, status, req.user),
     ),
   );
-const update = catchAsyncError(async (req, res) => successResponse(res, 200, "Cập nhật đơn hàng thành công", await service.update(req.params.id, req.body)));
+const update = catchAsyncError(async (req, res) =>
+  successResponse(
+    res,
+    200,
+    "Cập nhật đơn hàng thành công",
+    await service.update(req.params.id, req.body),
+  ),
+);
 module.exports = {
   list,
   get,

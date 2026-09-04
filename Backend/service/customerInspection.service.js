@@ -1,5 +1,5 @@
-const { database } = require('../database/database');
-const { ErrorHandler } = require('../middleware/errorMiddleware');
+const { database } = require("../database/database");
+const { ErrorHandler } = require("../middleware/errorMiddleware");
 
 const getByOrder = async (orderId, userId) => {
   const { rows } = await database.query(
@@ -35,7 +35,7 @@ const getByOrder = async (orderId, userId) => {
      WHERE o.id=$1 AND c.user_id=$2`,
     [orderId, userId],
   );
-  if (!rows[0]) throw new ErrorHandler('Không tìm thấy đơn hàng', 404);
+  if (!rows[0]) throw new ErrorHandler("Không tìm thấy đơn hàng", 404);
   return rows[0];
 };
 

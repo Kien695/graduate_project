@@ -8,5 +8,10 @@ router.post("/refresh-token", controller.refreshToken);
 router.post("/logout", controller.logout);
 router.post("/logout-all", auth, controller.logoutAll);
 router.post("/change-password", auth, controller.changePassword);
-router.post("/unlock-account", auth, authorize("admin"), controller.unlockAccount);
+router.post(
+  "/unlock-account",
+  auth,
+  authorize("admin"),
+  controller.unlockAccount,
+);
 module.exports = router;

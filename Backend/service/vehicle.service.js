@@ -1,5 +1,5 @@
-const { database } = require('../database/database');
-const { ErrorHandler } = require('../middleware/errorMiddleware');
+const { database } = require("../database/database");
+const { ErrorHandler } = require("../middleware/errorMiddleware");
 
 const SELECT_FIELDS = `
   id,
@@ -29,7 +29,7 @@ const getById = async (id) => {
     `SELECT ${SELECT_FIELDS} FROM vehicles WHERE id=$1`,
     [id],
   );
-  if (!rows[0]) throw new ErrorHandler('Không tìm thấy xe', 404);
+  if (!rows[0]) throw new ErrorHandler("Không tìm thấy xe", 404);
   return rows[0];
 };
 

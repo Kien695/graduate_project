@@ -11,6 +11,14 @@ import theme from "./slices/themeSlice";
 
 export const store = configureStore({
   reducer: {
-    auth, vehicles, accessories, customers, orders, contracts, inspections, security, theme,
+    auth,
+    vehicles,
+    accessories,
+    customers,
+    orders,
+    contracts,
+    inspections,
+    security,
+    theme,
   },
 });

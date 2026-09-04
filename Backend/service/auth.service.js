@@ -15,7 +15,9 @@ const {
 const MAX_FAILURES = Number(process.env.MAX_FAILED_LOGIN_ATTEMPTS || 5);
 
 const normalizeDeviceType = (deviceType, userAgent = "") => {
-  const requested = String(deviceType || "").trim().toUpperCase();
+  const requested = String(deviceType || "")
+    .trim()
+    .toUpperCase();
   if (["PC", "MOBILE"].includes(requested)) return requested;
   return /android|iphone|ipad|mobile/i.test(userAgent) ? "MOBILE" : "PC";
 };
@@ -29,11 +31,9 @@ const registerCustomer = async (input) => {
         [emailLookupHash(input.email), input.email],
       );
       if (existing.rows[0])
-        throw new ErrorHandler(
-          "Email đã tồn tại",
-          409,
-          [{ field: "email", message: "Email này đã được sử dụng" }],
-        );
+        throw new ErrorHandler("Email đã tồn tại", 409, [
+          { field: "email", message: "Email này đã được sử dụng" },
+        ]);
 
       const passwordHash = await hashPassword(input.password);
       const encryptedEmail = encryptProfileValue(input.email);
@@ -63,16 +63,17 @@ const registerCustomer = async (input) => {
       await client.query(
         `INSERT INTO customer_storage(customer_id,quota_mb,used_mb)
          VALUES($1,$2,0) ON CONFLICT(customer_id) DO NOTHING`,
-        [customer.rows[0].id, Number(process.env.CUSTOMER_STORAGE_QUOTA_MB || 500)],
+        [
+          customer.rows[0].id,
+          Number(process.env.CUSTOMER_STORAGE_QUOTA_MB || 500),
+        ],
       );
     });
   } catch (error) {
     if (error.code === "23505")
-      throw new ErrorHandler(
-        "Email đã tồn tại",
-        409,
-        [{ field: "email", message: "Email này đã được sử dụng" }],
-      );
+      throw new ErrorHandler("Email đã tồn tại", 409, [
+        { field: "email", message: "Email này đã được sử dụng" },
+      ]);
     throw error;
   }
 };
@@ -135,11 +136,18 @@ const login = (input) =>
       const email =
         decryptProfileValue(user.email_encrypted) || user.email || input.email;
       const phone =
-        decryptProfileValue(user.phone_encrypted) || user.phone || profile?.phone || null;
+        decryptProfileValue(user.phone_encrypted) ||
+        user.phone ||
+        profile?.phone ||
+        null;
       const encryptedEmail =
-        user.email_encrypted || profile?.email_encrypted || encryptProfileValue(email);
+        user.email_encrypted ||
+        profile?.email_encrypted ||
+        encryptProfileValue(email);
       const encryptedPhone =
-        user.phone_encrypted || profile?.phone_encrypted || encryptProfileValue(phone);
+        user.phone_encrypted ||
+        profile?.phone_encrypted ||
+        encryptProfileValue(phone);
       await client.query(
         `UPDATE users SET username=$2,email=NULL,phone=NULL,email_encrypted=$3,
            phone_encrypted=$4,email_lookup_hash=$5,updated_at=NOW()
@@ -278,4 +286,12 @@ const setLock = async (userId, locked) => {
   if (locked) await logoutAll(userId);
   return rows[0];
 };
-module.exports = { registerCustomer, login, refresh, logout, logoutAll, changePassword, setLock };
+module.exports = {
+  registerCustomer,
+  login,
+  refresh,
+  logout,
+  logoutAll,
+  changePassword,
+  setLock,
+};

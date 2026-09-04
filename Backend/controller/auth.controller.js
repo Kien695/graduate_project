@@ -6,7 +6,9 @@ const { successResponse } = require("../utils/response");
 const refreshCookieOptions = () => ({
   httpOnly: true,
   secure: process.env.NODE_ENV === "production",
-  sameSite: process.env.COOKIE_SAME_SITE || (process.env.NODE_ENV === "production" ? "none" : "lax"),
+  sameSite:
+    process.env.COOKIE_SAME_SITE ||
+    (process.env.NODE_ENV === "production" ? "none" : "lax"),
   path: "/api/auth",
   maxAge: 7 * 86400000,
 });

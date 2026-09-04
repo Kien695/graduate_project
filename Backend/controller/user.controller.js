@@ -20,7 +20,12 @@ const updateMe = catchAsyncError(async (req, res) =>
   ),
 );
 const updateAvatar = catchAsyncError(async (req, res) =>
-  successResponse(res, 200, "Cập nhật ảnh đại diện thành công", await userService.updateAvatar(req.user, req.file)),
+  successResponse(
+    res,
+    200,
+    "Cập nhật ảnh đại diện thành công",
+    await userService.updateAvatar(req.user, req.file),
+  ),
 );
 const updateSecurityLevel = catchAsyncError(async (req, res) => {
   if (!req.body.securityLevelId)

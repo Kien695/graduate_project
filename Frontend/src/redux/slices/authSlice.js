@@ -9,7 +9,9 @@ export const login = createAsyncThunk(
     try {
       const data = (await postData("/auth/login", credentials)).data;
       if (!hasAdminAccess(data.user)) {
-        await postData("/auth/logout", { refreshToken: data.refreshToken }).catch(() => undefined);
+        await postData("/auth/logout", {
+          refreshToken: data.refreshToken,
+        }).catch(() => undefined);
         return rejectWithValue(ADMIN_ACCESS_ERROR);
       }
       return data;
@@ -26,7 +28,9 @@ export const updateCurrentUser = createAsyncThunk(
     try {
       return (await putData("/users/me", profile)).data;
     } catch (error) {
-      return rejectWithValue(error.response?.data?.message || "Không thể cập nhật hồ sơ");
+      return rejectWithValue(
+        error.response?.data?.message || "Không thể cập nhật hồ sơ",
+      );
     }
   },
 );
@@ -38,7 +42,9 @@ export const updateCurrentAvatar = createAsyncThunk(
       form.append("avatar", file);
       return (await putData("/users/me/avatar", form)).data;
     } catch (error) {
-      return rejectWithValue(error.response?.data?.message || "Không thể cập nhật ảnh đại diện");
+      return rejectWithValue(
+        error.response?.data?.message || "Không thể cập nhật ảnh đại diện",
+      );
     }
   },
 );
@@ -49,7 +55,9 @@ export const changeCurrentPassword = createAsyncThunk(
       await postData("/auth/change-password", payload);
       return true;
     } catch (error) {
-      return rejectWithValue(error.response?.data?.message || "Không thể đổi mật khẩu");
+      return rejectWithValue(
+        error.response?.data?.message || "Không thể đổi mật khẩu",
+      );
     }
   },
 );

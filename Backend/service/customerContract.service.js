@@ -1,11 +1,12 @@
-const { database, withTransaction } = require('../database/database');
-const { ErrorHandler } = require('../middleware/errorMiddleware');
-const auditLog = require('./auditLog.service');
-const { decryptProfileValue } = require('../utils/profileEncryption');
+const { database, withTransaction } = require("../database/database");
+const { ErrorHandler } = require("../middleware/errorMiddleware");
+const auditLog = require("./auditLog.service");
+const { decryptProfileValue } = require("../utils/profileEncryption");
 
 const presentContract = (contract) => {
   contract.customer_email =
-    decryptProfileValue(contract.customer_email_encrypted) || contract.customer_email;
+    decryptProfileValue(contract.customer_email_encrypted) ||
+    contract.customer_email;
   delete contract.customer_email_encrypted;
   return contract;
 };
@@ -54,7 +55,7 @@ const get = async (id, userId, executor = database) => {
        AND COALESCE(subject_level.rank,0)>=COALESCE(object_level.rank,0)`,
     [id, userId],
   );
-  if (!rows[0]) throw new ErrorHandler('Không tìm thấy hợp đồng', 404);
+  if (!rows[0]) throw new ErrorHandler("Không tìm thấy hợp đồng", 404);
   return presentContract(rows[0]);
 };
 
@@ -70,9 +71,12 @@ const confirm = (id, userId, ipAddress) =>
       [id, userId],
     );
     const contract = current.rows[0];
-    if (!contract) throw new ErrorHandler('Không tìm thấy hợp đồng', 404);
-    if (String(contract.status).toLowerCase() !== 'approved')
-      throw new ErrorHandler('Hợp đồng chưa ở trạng thái cho phép xác nhận', 409);
+    if (!contract) throw new ErrorHandler("Không tìm thấy hợp đồng", 404);
+    if (String(contract.status).toLowerCase() !== "approved")
+      throw new ErrorHandler(
+        "Hợp đồng chưa ở trạng thái cho phép xác nhận",
+        409,
+      );
 
     const updated = await client.query(
       `UPDATE contracts
@@ -83,8 +87,8 @@ const confirm = (id, userId, ipAddress) =>
     );
     await auditLog.record(client, {
       userId,
-      action: 'SIGNED',
-      entityType: 'contract',
+      action: "SIGNED",
+      entityType: "contract",
       entityId: id,
       oldValues: contract,
       newValues: updated.rows[0],

@@ -1,5 +1,106 @@
-import {createAsyncThunk,createSlice} from "@reduxjs/toolkit";import {getData,postData,putData,deleteData,patchData} from "../../utils/api";
-export const fetchContracts=createAsyncThunk("contracts/fetch",async(_,{rejectWithValue})=>{try{return(await getData("/contracts")).data;}catch(e){return rejectWithValue(e.response?.data?.message||"Không thể tải hợp đồng");}});
-const action=(name,path,method="post")=>createAsyncThunk(`contracts/${name}`,async(payload,{rejectWithValue})=>{try{const{id,data}=typeof payload==="object"?payload:{id:payload};let r;if(method==="put")r=await putData(`/contracts/${id}`,data);else if(method==="delete")r=await deleteData(`/contracts/${id}`);else if(method==="patch")r=await patchData(`/contracts/${id}/${path}`,data);else r=await postData(`/contracts/${id}/${path}`,data);return r.data;}catch(e){return rejectWithValue(e.response?.data?.message||"Không thể cập nhật hợp đồng");}});
-export const createContract=createAsyncThunk("contracts/create",async(data,{rejectWithValue})=>{try{return(await postData("/contracts",data)).data;}catch(e){return rejectWithValue(e.response?.data?.message||"Không thể tạo hợp đồng");}});export const updateContract=action("update","","put");export const cancelContract=action("cancel","","delete");export const approveContract=action("approve","approve");export const signContract=action("sign","sign");export const payContract=action("payment","payment");export const updateContractSecurity=action("security","security-level","patch");
-const thunks=[createContract,updateContract,cancelContract,approveContract,signContract,payContract,updateContractSecurity];const slice=createSlice({name:"contracts",initialState:{items:[],loading:false,submitting:false,error:null},reducers:{},extraReducers:b=>{b.addCase(fetchContracts.pending,s=>{s.loading=true;}).addCase(fetchContracts.fulfilled,(s,a)=>{s.loading=false;s.items=a.payload||[];}).addCase(fetchContracts.rejected,(s,a)=>{s.loading=false;s.error=a.payload;});for(const t of thunks)b.addCase(t.pending,s=>{s.submitting=true;s.error=null;}).addCase(t.fulfilled,(s,a)=>{s.submitting=false;const i=s.items.findIndex(x=>x.id===a.payload?.id);if(i>=0)s.items[i]=a.payload;else if(a.payload?.id)s.items.unshift(a.payload);}).addCase(t.rejected,(s,a)=>{s.submitting=false;s.error=a.payload;});}});export default slice.reducer;
+import { createAsyncThunk, createSlice } from "@reduxjs/toolkit";
+import {
+  getData,
+  postData,
+  putData,
+  deleteData,
+  patchData,
+} from "../../utils/api";
+export const fetchContracts = createAsyncThunk(
+  "contracts/fetch",
+  async (_, { rejectWithValue }) => {
+    try {
+      return (await getData("/contracts")).data;
+    } catch (e) {
+      return rejectWithValue(
+        e.response?.data?.message || "Không thể tải hợp đồng",
+      );
+    }
+  },
+);
+const action = (name, path, method = "post") =>
+  createAsyncThunk(
+    `contracts/${name}`,
+    async (payload, { rejectWithValue }) => {
+      try {
+        const { id, data } =
+          typeof payload === "object" ? payload : { id: payload };
+        let r;
+        if (method === "put") r = await putData(`/contracts/${id}`, data);
+        else if (method === "delete") r = await deleteData(`/contracts/${id}`);
+        else if (method === "patch")
+          r = await patchData(`/contracts/${id}/${path}`, data);
+        else r = await postData(`/contracts/${id}/${path}`, data);
+        return r.data;
+      } catch (e) {
+        return rejectWithValue(
+          e.response?.data?.message || "Không thể cập nhật hợp đồng",
+        );
+      }
+    },
+  );
+export const createContract = createAsyncThunk(
+  "contracts/create",
+  async (data, { rejectWithValue }) => {
+    try {
+      return (await postData("/contracts", data)).data;
+    } catch (e) {
+      return rejectWithValue(
+        e.response?.data?.message || "Không thể tạo hợp đồng",
+      );
+    }
+  },
+);
+export const updateContract = action("update", "", "put");
+export const cancelContract = action("cancel", "", "delete");
+export const approveContract = action("approve", "approve");
+export const signContract = action("sign", "sign");
+export const payContract = action("payment", "payment");
+export const updateContractSecurity = action(
+  "security",
+  "security-level",
+  "patch",
+);
+const thunks = [
+  createContract,
+  updateContract,
+  cancelContract,
+  approveContract,
+  signContract,
+  payContract,
+  updateContractSecurity,
+];
+const slice = createSlice({
+  name: "contracts",
+  initialState: { items: [], loading: false, submitting: false, error: null },
+  reducers: {},
+  extraReducers: (b) => {
+    b.addCase(fetchContracts.pending, (s) => {
+      s.loading = true;
+    })
+      .addCase(fetchContracts.fulfilled, (s, a) => {
+        s.loading = false;
+        s.items = a.payload || [];
+      })
+      .addCase(fetchContracts.rejected, (s, a) => {
+        s.loading = false;
+        s.error = a.payload;
+      });
+    for (const t of thunks)
+      b.addCase(t.pending, (s) => {
+        s.submitting = true;
+        s.error = null;
+      })
+        .addCase(t.fulfilled, (s, a) => {
+          s.submitting = false;
+          const i = s.items.findIndex((x) => x.id === a.payload?.id);
+          if (i >= 0) s.items[i] = a.payload;
+          else if (a.payload?.id) s.items.unshift(a.payload);
+        })
+        .addCase(t.rejected, (s, a) => {
+          s.submitting = false;
+          s.error = a.payload;
+        });
+  },
+});
+export default slice.reducer;

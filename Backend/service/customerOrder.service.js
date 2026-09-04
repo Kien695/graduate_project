@@ -1,14 +1,14 @@
-const { database, withTransaction } = require('../database/database');
-const { ErrorHandler } = require('../middleware/errorMiddleware');
+const { database, withTransaction } = require("../database/database");
+const { ErrorHandler } = require("../middleware/errorMiddleware");
 
 const create = (vehicleId, userId) =>
   withTransaction(async (client) => {
     const customerResult = await client.query(
-      'SELECT id FROM customers WHERE user_id=$1 AND is_active IS DISTINCT FROM FALSE',
+      "SELECT id FROM customers WHERE user_id=$1 AND is_active IS DISTINCT FROM FALSE",
       [userId],
     );
     if (!customerResult.rows[0])
-      throw new ErrorHandler('Không tìm thấy hồ sơ khách hàng', 404);
+      throw new ErrorHandler("Không tìm thấy hồ sơ khách hàng", 404);
 
     const vehicleResult = await client.query(
       `SELECT id,brand,model,price,status,COALESCE(images,'[]'::jsonb) images
@@ -16,9 +16,9 @@ const create = (vehicleId, userId) =>
       [vehicleId],
     );
     const vehicle = vehicleResult.rows[0];
-    if (!vehicle) throw new ErrorHandler('Không tìm thấy xe', 404);
-    if (String(vehicle.status).toUpperCase() !== 'AVAILABLE')
-      throw new ErrorHandler('Xe đã được đặt hoặc không còn khả dụng', 409);
+    if (!vehicle) throw new ErrorHandler("Không tìm thấy xe", 404);
+    if (String(vehicle.status).toUpperCase() !== "AVAILABLE")
+      throw new ErrorHandler("Xe đã được đặt hoặc không còn khả dụng", 409);
 
     const orderResult = await client.query(
       `INSERT INTO orders(customer_id,vehicle_id,total_amount,created_by,status)
@@ -32,7 +32,7 @@ const create = (vehicleId, userId) =>
       [vehicle.id],
     );
     if (!reserved.rows[0])
-      throw new ErrorHandler('Xe vừa được khách hàng khác đặt', 409);
+      throw new ErrorHandler("Xe vừa được khách hàng khác đặt", 409);
 
     return {
       ...orderResult.rows[0],

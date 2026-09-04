@@ -9,19 +9,25 @@ const millisecondsUntilNextRun = (hour = 2) => {
 };
 
 const start = () => {
-  if (String(process.env.AUTO_BACKUP_ENABLED || "true").toLowerCase() === "false") return null;
+  if (
+    String(process.env.AUTO_BACKUP_ENABLED || "true").toLowerCase() === "false"
+  )
+    return null;
   const schedule = () => {
-    const timer = setTimeout(async () => {
-      try {
-        await backup.create(null);
-        await backup.enforceRetention();
-        console.log("Scheduled database backup completed");
-      } catch (error) {
-        console.error("Scheduled database backup failed:", error.message);
-      } finally {
-        schedule();
-      }
-    }, millisecondsUntilNextRun(Number(process.env.BACKUP_HOUR || 2)));
+    const timer = setTimeout(
+      async () => {
+        try {
+          await backup.create(null);
+          await backup.enforceRetention();
+          console.log("Scheduled database backup completed");
+        } catch (error) {
+          console.error("Scheduled database backup failed:", error.message);
+        } finally {
+          schedule();
+        }
+      },
+      millisecondsUntilNextRun(Number(process.env.BACKUP_HOUR || 2)),
+    );
     timer.unref();
   };
   schedule();

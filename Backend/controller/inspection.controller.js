@@ -47,12 +47,21 @@ const checklist = catchAsyncError(async (req, res) => {
     note: String(item.note || "").trim(),
   }));
   if (!normalized.length || normalized.some((item) => !item.label))
-    throw new ErrorHandler("Checklist phải có ít nhất một hạng mục hợp lệ", 400);
+    throw new ErrorHandler(
+      "Checklist phải có ít nhất một hạng mục hợp lệ",
+      400,
+    );
   return successResponse(
     res,
     200,
     "Cập nhật checklist thành công",
-    await s.updateChecklist(req.params.id, normalized, req.body.notes, req.user, req.ip),
+    await s.updateChecklist(
+      req.params.id,
+      normalized,
+      req.body.notes,
+      req.user,
+      req.ip,
+    ),
   );
 });
 const action = (x) =>

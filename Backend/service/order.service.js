@@ -1,6 +1,6 @@
 const { database, withTransaction } = require("../database/database");
 const { ErrorHandler } = require("../middleware/errorMiddleware");
-const notification = require('./notification.service');
+const notification = require("./notification.service");
 const list = async (user) => {
   const own = user.role === "customer";
   const { rows } = await database.query(
@@ -10,8 +10,14 @@ const list = async (user) => {
   return rows;
 };
 const get = async (id, user) => {
-  const ownClause = user?.role === "customer" ? "AND EXISTS(SELECT 1 FROM customers c WHERE c.id=orders.customer_id AND c.user_id=$2)" : "";
-  const { rows } = await database.query(`SELECT * FROM orders WHERE id=$1 ${ownClause}`, user?.role === "customer" ? [id, user.id] : [id]);
+  const ownClause =
+    user?.role === "customer"
+      ? "AND EXISTS(SELECT 1 FROM customers c WHERE c.id=orders.customer_id AND c.user_id=$2)"
+      : "";
+  const { rows } = await database.query(
+    `SELECT * FROM orders WHERE id=$1 ${ownClause}`,
+    user?.role === "customer" ? [id, user.id] : [id],
+  );
   if (!rows[0]) throw new ErrorHandler("Không tìm thấy đơn hàng", 404);
   return rows[0];
 };
@@ -57,8 +63,12 @@ const transition = (id, status, user) =>
       completed: ["confirmed"],
     };
     if (user.role === "customer") {
-      const owner = await c.query("SELECT 1 FROM customers WHERE id=$1 AND user_id=$2", [o.rows[0].customer_id, user.id]);
-      if (!owner.rows[0] || status !== "cancelled") throw new ErrorHandler("Bạn không có quyền cập nhật đơn hàng này", 403);
+      const owner = await c.query(
+        "SELECT 1 FROM customers WHERE id=$1 AND user_id=$2",
+        [o.rows[0].customer_id, user.id],
+      );
+      if (!owner.rows[0] || status !== "cancelled")
+        throw new ErrorHandler("Bạn không có quyền cập nhật đơn hàng này", 403);
     }
     if (!allowed[status].includes(o.rows[0].status))
       throw new ErrorHandler("Chuyển trạng thái đơn hàng không hợp lệ", 409);
@@ -81,16 +91,22 @@ const transition = (id, status, user) =>
       "INSERT INTO audit_logs(user_id,action,entity_type,entity_id,new_values) VALUES($1,$2,'order',$3,$4)",
       [user.id, status, id, JSON.stringify({ status })],
     );
-    if (user.role !== 'customer') await notification.createForCustomer(c, o.rows[0].customer_id, {
-      title: 'Đơn hàng đã được cập nhật',
-      message: `Đơn hàng #${id} đã chuyển sang trạng thái ${status}.`,
-      type: 'ORDER', referenceId: Number(id),
-    });
+    if (user.role !== "customer")
+      await notification.createForCustomer(c, o.rows[0].customer_id, {
+        title: "Đơn hàng đã được cập nhật",
+        message: `Đơn hàng #${id} đã chuyển sang trạng thái ${status}.`,
+        type: "ORDER",
+        referenceId: Number(id),
+      });
     return rows[0];
   });
 const update = async (id, input) => {
-  const { rows } = await database.query("UPDATE orders SET note=COALESCE($2,note),updated_at=NOW() WHERE id=$1 AND status IN ('pending','confirmed') RETURNING *", [id, input.note || null]);
-  if (!rows[0]) throw new ErrorHandler("Không tìm thấy đơn hoặc không thể cập nhật", 409);
+  const { rows } = await database.query(
+    "UPDATE orders SET note=COALESCE($2,note),updated_at=NOW() WHERE id=$1 AND status IN ('pending','confirmed') RETURNING *",
+    [id, input.note || null],
+  );
+  if (!rows[0])
+    throw new ErrorHandler("Không tìm thấy đơn hoặc không thể cập nhật", 409);
   return rows[0];
 };
 module.exports = { list, get, create, update, transition };

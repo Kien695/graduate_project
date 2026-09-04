@@ -13,9 +13,9 @@ const securityLevelRouter = require("./securityLevel.router");
 const backupRouter = require("./backup.router");
 const monitoringRouter = require("./monitoring.router");
 const employeeRouter = require("./employee.router");
-const customerOrderRouter = require('./customerOrder.router');
-const customerContractRouter = require('./customerContract.router');
-const notificationRouter = require('./notification.router');
+const customerOrderRouter = require("./customerOrder.router");
+const customerContractRouter = require("./customerContract.router");
+const notificationRouter = require("./notification.router");
 module.exports = (app) => {
   app.use("/api/auth", authRouter);
   app.use("/api/users", userRouter);
@@ -32,7 +32,7 @@ module.exports = (app) => {
   app.use("/api/backups", backupRouter);
   app.use("/api/monitoring", monitoringRouter);
   app.use("/api/employees", employeeRouter);
-  app.use('/api/customer/orders', customerOrderRouter);
-  app.use('/api/customer/contracts', customerContractRouter);
-  app.use('/api/notifications', notificationRouter);
+  app.use("/api/customer/orders", customerOrderRouter);
+  app.use("/api/customer/contracts", customerContractRouter);
+  app.use("/api/notifications", notificationRouter);
 };

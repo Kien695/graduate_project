@@ -21,22 +21,36 @@ api.interceptors.response.use(
   (response) => response,
   async (error) => {
     const request = error.config;
-    const isAuthRequest = request?.url?.includes("/auth/login") || request?.url?.includes("/auth/refresh-token");
-    if (error.response?.status === 401 && request && !request._retry && !isAuthRequest) {
+    const isAuthRequest =
+      request?.url?.includes("/auth/login") ||
+      request?.url?.includes("/auth/refresh-token");
+    if (
+      error.response?.status === 401 &&
+      request &&
+      !request._retry &&
+      !isAuthRequest
+    ) {
       request._retry = true;
       try {
-        refreshPromise ||= refreshClient.post("/auth/refresh-token").finally(() => { refreshPromise = null; });
+        refreshPromise ||= refreshClient
+          .post("/auth/refresh-token")
+          .finally(() => {
+            refreshPromise = null;
+          });
         const response = await refreshPromise;
         const token = response.data.data.accessToken;
         localStorage.setItem("accessToken", token);
         request.headers.Authorization = `Bearer ${token}`;
         return api(request);
       } catch (refreshError) {
-        const terminal = [400, 401, 423].includes(refreshError.response?.status);
+        const terminal = [400, 401, 423].includes(
+          refreshError.response?.status,
+        );
         if (terminal) {
           localStorage.removeItem("accessToken");
           localStorage.removeItem("currentUser");
-          if (window.location.pathname !== "/admin/login") window.location.assign("/admin/login");
+          if (window.location.pathname !== "/admin/login")
+            window.location.assign("/admin/login");
         }
         return Promise.reject(refreshError);
       }
@@ -45,10 +59,15 @@ api.interceptors.response.use(
   },
 );
 
-export const getData = (url, config) => api.get(url, config).then((res) => res.data);
-export const postData = (url, data, config) => api.post(url, data, config).then((res) => res.data);
-export const putData = (url, data, config) => api.put(url, data, config).then((res) => res.data);
-export const patchData = (url, data, config) => api.patch(url, data, config).then((res) => res.data);
-export const deleteData = (url, data, config) => api.delete(url, { ...config, data }).then((res) => res.data);
+export const getData = (url, config) =>
+  api.get(url, config).then((res) => res.data);
+export const postData = (url, data, config) =>
+  api.post(url, data, config).then((res) => res.data);
+export const putData = (url, data, config) =>
+  api.put(url, data, config).then((res) => res.data);
+export const patchData = (url, data, config) =>
+  api.patch(url, data, config).then((res) => res.data);
+export const deleteData = (url, data, config) =>
+  api.delete(url, { ...config, data }).then((res) => res.data);
 
 export default api;

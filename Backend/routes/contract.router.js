@@ -9,7 +9,12 @@ const {
 const r = express.Router();
 r.use(auth);
 r.get("/", authorize("admin", "manager", "staff"), c.list);
-r.post("/", authorize("admin", "manager", "staff"), enforceContractCreate, c.create);
+r.post(
+  "/",
+  authorize("admin", "manager", "staff"),
+  enforceContractCreate,
+  c.create,
+);
 r.get("/:id", enforceContractAccess, c.get);
 r.put(
   "/:id",
@@ -17,8 +22,18 @@ r.put(
   enforceContractAccess,
   c.update,
 );
-r.delete("/:id", authorize("admin", "manager"), enforceContractAccess, c.remove);
-r.post("/:id/approve", authorize("admin", "manager"), enforceContractAccess, c.approve);
+r.delete(
+  "/:id",
+  authorize("admin", "manager"),
+  enforceContractAccess,
+  c.remove,
+);
+r.post(
+  "/:id/approve",
+  authorize("admin", "manager"),
+  enforceContractAccess,
+  c.approve,
+);
 r.post("/:id/sign", enforceContractAccess, c.sign);
 r.post(
   "/:id/payment",

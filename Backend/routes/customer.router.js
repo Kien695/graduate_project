@@ -60,7 +60,8 @@ r.post(
   "/:id/encrypt-profile",
   authorize("admin", "manager"),
   catchAsyncError(async (req, res) => {
-    if (!process.env.PROFILE_ENCRYPTION_KEY) throw new ErrorHandler("Thiếu PROFILE_ENCRYPTION_KEY", 500);
+    if (!process.env.PROFILE_ENCRYPTION_KEY)
+      throw new ErrorHandler("Thiếu PROFILE_ENCRYPTION_KEY", 500);
     const { rows } = await database.query(
       "UPDATE customers SET encrypted_profile=encode(pgp_sym_encrypt($2::text,$3),'base64') WHERE id=$1 RETURNING id",
       [
@@ -76,12 +77,18 @@ r.get(
   "/:id/encrypted-profile",
   authorize("admin", "manager"),
   catchAsyncError(async (req, res) => {
-    if (!process.env.PROFILE_ENCRYPTION_KEY) throw new ErrorHandler("Thiếu PROFILE_ENCRYPTION_KEY", 500);
+    if (!process.env.PROFILE_ENCRYPTION_KEY)
+      throw new ErrorHandler("Thiếu PROFILE_ENCRYPTION_KEY", 500);
     const { rows } = await database.query(
       "SELECT id,pgp_sym_decrypt(decode(encrypted_profile,'base64'),$2) profile FROM customers WHERE id=$1 AND encrypted_profile IS NOT NULL",
       [req.params.id, process.env.PROFILE_ENCRYPTION_KEY],
     );
-    return successResponse(res, 200, "Truy xuất hồ sơ thành công", rows[0] || null);
+    return successResponse(
+      res,
+      200,
+      "Truy xuất hồ sơ thành công",
+      rows[0] || null,
+    );
   }),
 );
 r.get("/:id", authorize("admin", "manager", "staff"), c.get);

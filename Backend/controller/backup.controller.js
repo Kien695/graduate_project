@@ -30,6 +30,11 @@ const restore = catchAsyncError(async (req, res) => {
   );
 });
 const retention = catchAsyncError(async (req, res) =>
-  successResponse(res, 200, "Áp dụng retention thành công", await s.enforceRetention()),
+  successResponse(
+    res,
+    200,
+    "Áp dụng retention thành công",
+    await s.enforceRetention(),
+  ),
 );
 module.exports = { list, history, get, create, restore, retention };

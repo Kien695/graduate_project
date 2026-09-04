@@ -13,9 +13,9 @@ const resolvePostgresTool = (configured, executable) => {
   if (process.platform === "win32") {
     const root = "C:\\Program Files\\PostgreSQL";
     if (fs.existsSync(root)) {
-      const versions = fs.readdirSync(root).sort((a, b) =>
-        b.localeCompare(a, undefined, { numeric: true }),
-      );
+      const versions = fs
+        .readdirSync(root)
+        .sort((a, b) => b.localeCompare(a, undefined, { numeric: true }));
       for (const version of versions) {
         const candidate = path.join(root, version, "bin", `${executable}.exe`);
         if (fs.existsSync(candidate)) return candidate;
@@ -135,7 +135,10 @@ const restore = async (id, userId, ipAddress) => {
       action: "RESTORE",
       entityType: "backup",
       entityId: id,
-      newValues: { fileName: backup.file_name, restoredAt: new Date().toISOString() },
+      newValues: {
+        fileName: backup.file_name,
+        restoredAt: new Date().toISOString(),
+      },
       ipAddress,
     });
     return { restored: true, backupId: id };
@@ -144,7 +147,10 @@ const restore = async (id, userId, ipAddress) => {
   }
 };
 const enforceRetention = async () => {
-  const retentionDays = Math.max(1, Number(process.env.BACKUP_RETENTION_DAYS || 30));
+  const retentionDays = Math.max(
+    1,
+    Number(process.env.BACKUP_RETENTION_DAYS || 30),
+  );
   const { rows } = await database.query(
     `SELECT * FROM backup_records
      WHERE status='completed' AND created_at<NOW()-($1*INTERVAL '1 day')`,

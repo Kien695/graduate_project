@@ -25,7 +25,7 @@ const create = catchAsyncError(async (req, res) => {
     res,
     201,
     "Tạo hợp đồng thành công",
-    await service.create(req.body, req.user, req.ip),
+    await service.create(req.body, req.macClassification, req.user, req.ip),
   );
 });
 const update = catchAsyncError(async (req, res) =>
@@ -66,21 +66,14 @@ const logs = catchAsyncError(async (req, res) =>
     }),
   ),
 );
-const security = catchAsyncError(async (req, res) => {
-  if (!req.body.securityLevelId)
-    throw new ErrorHandler("securityLevelId là bắt buộc", 400);
-  return successResponse(
+const security = catchAsyncError(async (req, res) =>
+  successResponse(
     res,
     200,
     "Cập nhật nhãn bảo mật thành công",
-    await service.setSecurityLevel(
-      req.params.id,
-      req.body.securityLevelId,
-      req.user,
-      req.ip,
-    ),
-  );
-});
+    await service.setSecurityLevel(req.params.id, req.macClassification, req.user, req.ip),
+  ),
+);
 module.exports = {
   list,
   get,

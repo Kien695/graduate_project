@@ -4,22 +4,58 @@
 @tailwind utilities;
 
 @layer base {
-  * { box-sizing: border-box; }
-  html { font-family: "Montserrat", sans-serif; background: #f8fafc; }
-  html.dark { background: #020617; }
-  body { margin: 0; min-width: 320px; min-height: 100vh; }
-  button, input, select, textarea { font: inherit; }
-  button { cursor: pointer; }
+  * {
+    box-sizing: border-box;
+  }
+  html {
+    font-family: "Montserrat", sans-serif;
+    background: #f8fafc;
+  }
+  html.dark {
+    background: #020617;
+  }
+  body {
+    margin: 0;
+    min-width: 320px;
+    min-height: 100vh;
+  }
+  button,
+  input,
+  select,
+  textarea {
+    font: inherit;
+  }
+  button {
+    cursor: pointer;
+  }
 }
 
 @layer components {
-  .form-control { @apply w-full rounded-xl border border-slate-200 bg-white px-3.5 py-3 text-sm text-slate-800 outline-none transition focus:border-blue-500 focus:ring-4 focus:ring-blue-50 dark:border-slate-700 dark:bg-slate-800 dark:text-slate-100 dark:focus:ring-blue-950; }
-  .table-head { @apply bg-slate-50 text-[11px] uppercase tracking-wider text-slate-500 dark:bg-slate-900 dark:text-slate-400; }
-  .table-head th { @apply px-5 py-4 font-bold; }
-  .table-body { @apply divide-y divide-slate-100 text-slate-600 dark:divide-slate-800 dark:text-slate-300; }
-  .table-body td { @apply px-5 py-4; }
-  .table-body tr { @apply transition hover:bg-slate-50/80 dark:hover:bg-slate-800/60; }
-  .action-blue { @apply whitespace-nowrap rounded-lg bg-blue-50 px-2.5 py-1.5 font-bold text-blue-700 hover:bg-blue-100 disabled:opacity-50 dark:bg-blue-950/50 dark:text-blue-400 dark:hover:bg-blue-950; }
-  .action-green { @apply whitespace-nowrap rounded-lg bg-emerald-50 px-2.5 py-1.5 font-bold text-emerald-700 hover:bg-emerald-100 disabled:opacity-50 dark:bg-emerald-950/50 dark:text-emerald-400 dark:hover:bg-emerald-950; }
-  .action-red { @apply whitespace-nowrap rounded-lg bg-rose-50 px-2.5 py-1.5 font-bold text-rose-700 hover:bg-rose-100 disabled:opacity-50 dark:bg-rose-950/50 dark:text-rose-400 dark:hover:bg-rose-950; }
+  .form-control {
+    @apply w-full rounded-xl border border-slate-200 bg-white px-3.5 py-3 text-sm text-slate-800 outline-none transition focus:border-blue-500 focus:ring-4 focus:ring-blue-50 dark:border-slate-700 dark:bg-slate-800 dark:text-slate-100 dark:focus:ring-blue-950;
+  }
+  .table-head {
+    @apply bg-slate-50 text-[11px] uppercase tracking-wider text-slate-500 dark:bg-slate-900 dark:text-slate-400;
+  }
+  .table-head th {
+    @apply px-5 py-4 font-bold;
+  }
+  .table-body {
+    @apply divide-y divide-slate-100 text-slate-600 dark:divide-slate-800 dark:text-slate-300;
+  }
+  .table-body td {
+    @apply px-5 py-4;
+  }
+  .table-body tr {
+    @apply transition hover:bg-slate-50/80 dark:hover:bg-slate-800/60;
+  }
+  .action-blue {
+    @apply whitespace-nowrap rounded-lg bg-blue-50 px-2.5 py-1.5 font-bold text-blue-700 hover:bg-blue-100 disabled:opacity-50 dark:bg-blue-950/50 dark:text-blue-400 dark:hover:bg-blue-950;
+  }
+  .action-green {
+    @apply whitespace-nowrap rounded-lg bg-emerald-50 px-2.5 py-1.5 font-bold text-emerald-700 hover:bg-emerald-100 disabled:opacity-50 dark:bg-emerald-950/50 dark:text-emerald-400 dark:hover:bg-emerald-950;
+  }
+  .action-red {
+    @apply whitespace-nowrap rounded-lg bg-rose-50 px-2.5 py-1.5 font-bold text-rose-700 hover:bg-rose-100 disabled:opacity-50 dark:bg-rose-950/50 dark:text-rose-400 dark:hover:bg-rose-950;
+  }
 }
