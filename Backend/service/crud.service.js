@@ -106,6 +106,13 @@ const list = async (table, query = {}) => {
   const page = Math.max(Number(query.page) || 1, 1);
   const values = [];
   const where = [];
+  const source = table === "customers" ? `(SELECT c.*,u.is_locked,u.locked_until,
+    u.failed_login_attempts,u.is_active AS account_is_active,
+    CASE WHEN u.id IS NULL THEN 'NO_ACCOUNT'
+      WHEN (u.is_locked AND u.locked_until IS NULL) OR u.locked_until>NOW() THEN 'LOCKED'
+      WHEN u.is_active IS NOT TRUE THEN 'INACTIVE' ELSE 'ACTIVE' END AS account_status
+    FROM customers c LEFT JOIN users u ON u.id=c.user_id) AS customers` : table;
+  if (table === "customers" && query.locked === "true") where.push("account_status='LOCKED'");
   if (query.status && table === "vehicles") {
     values.push(query.status);
     where.push(`status=$${values.length}`);
@@ -121,12 +128,15 @@ const list = async (table, query = {}) => {
           : `(name ILIKE ${p})`,
     );
   }
+  const total = table === "customers" ? Number((await database.query(
+    `SELECT COUNT(*) AS total FROM ${source}${where.length ? ` WHERE ${where.join(" AND ")}` : ""}`, values,
+  )).rows[0].total) : undefined;
   values.push(limit, (page - 1) * limit);
   const { rows } = await database.query(
-    `SELECT * FROM ${table}${where.length ? ` WHERE ${where.join(" AND ")}` : ""} ORDER BY created_at DESC LIMIT $${values.length - 1} OFFSET $${values.length}`,
+    `SELECT * FROM ${source}${where.length ? ` WHERE ${where.join(" AND ")}` : ""} ORDER BY created_at DESC LIMIT $${values.length - 1} OFFSET $${values.length}`,
     values,
   );
-  return { items: rows.map((row) => present(table, row)), page, limit };
+  return { items: rows.map((row) => present(table, row)), page, limit, ...(total !== undefined ? { total } : {}) };
 };
 const get = async (table, id) => {
   config(table);

@@ -110,34 +110,24 @@ const restore = async (id, userId, ipAddress) => {
   )
     throw new ErrorHandler("File backup không hợp lệ", 400);
   try {
-    await run(
-      resolvePostgresTool(process.env.PG_RESTORE_PATH, "pg_restore"),
-      [
-        "--clean",
-        "--if-exists",
-        "--no-owner",
-        "--dbname",
-        process.env.DB_NAME,
-        resolved,
-      ],
-      {
-        env: {
-          ...process.env,
-          PGHOST: process.env.DB_HOST,
-          PGPORT: process.env.DB_PORT,
-          PGUSER: process.env.DB_USER,
-          PGPASSWORD: process.env.DB_PASSWORD,
-        },
-      },
-    );
+    await require("./restoreArchive")({
+      run, resolveTool: resolvePostgresTool, archive: resolved, directory: dir,
+      env: { ...process.env, PGHOST: process.env.DB_HOST, PGPORT: process.env.DB_PORT,
+        PGUSER: process.env.DB_USER, PGPASSWORD: process.env.DB_PASSWORD },
+    });
+    // The dump captures its own backup record while still processing.
+    await database.query("UPDATE backup_records SET status='completed',size_bytes=$2 WHERE id=$1", [id, backup.size_bytes]);
+    await database.query("UPDATE backup_history SET status='completed',size=$2,completed_at=NOW() WHERE backup_record_id=$1", [id, backup.size_bytes]);
+    const actor = userId ? await database.query("SELECT id FROM users WHERE id=$1", [userId]) : { rows: [] };
     await audit.record(null, {
-      userId,
+      userId: actor.rows[0]?.id || null,
       action: "RESTORE",
       entityType: "backup",
       entityId: id,
       newValues: {
         fileName: backup.file_name,
         restoredAt: new Date().toISOString(),
+        requestedBy: userId,
       },
       ipAddress,
     });
@@ -149,7 +139,7 @@ const restore = async (id, userId, ipAddress) => {
 const enforceRetention = async () => {
   const retentionDays = Math.max(
     1,
-    Number(process.env.BACKUP_RETENTION_DAYS || 30),
+    (await require("./backupSettings.service").get()).retention_days,
   );
   const { rows } = await database.query(
     `SELECT * FROM backup_records
@@ -171,4 +161,10 @@ const enforceRetention = async () => {
   return { retentionDays, removed };
 };
 
-module.exports = { list, history, get, create, restore, enforceRetention };
+let busy = false;
+const exclusive = (operation) => async (...args) => {
+  if (busy) throw new ErrorHandler("Đang có tác vụ sao lưu/phục hồi, vui lòng đợi hoàn tất", 409);
+  busy = true;
+  try { return await operation(...args); } finally { busy = false; }
+};
+module.exports = { list, history, get, create: exclusive(create), restore: exclusive(restore), enforceRetention: exclusive(enforceRetention) };

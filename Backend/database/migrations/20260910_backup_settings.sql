@@ -1,0 +1,7 @@
+CREATE TABLE IF NOT EXISTS backup_settings (
+  id SMALLINT PRIMARY KEY CHECK (id=1),
+  enabled BOOLEAN NOT NULL,
+  hour SMALLINT NOT NULL CHECK (hour BETWEEN 0 AND 23),
+  retention_days INTEGER NOT NULL CHECK (retention_days BETWEEN 1 AND 3650),
+  updated_at TIMESTAMPTZ NOT NULL DEFAULT NOW()
+);

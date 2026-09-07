@@ -22,11 +22,13 @@ const create = catchAsyncError(async (req, res) =>
 const restore = catchAsyncError(async (req, res) => {
   if (req.body.confirm !== true)
     throw new ErrorHandler("Phải xác nhận restore bằng confirm=true", 400);
+  const result = await s.restore(req.params.id, req.user.id, req.ip);
+  await require("../service/backupScheduler.service").start();
   return successResponse(
     res,
     200,
     "Restore thành công",
-    await s.restore(req.params.id, req.user.id, req.ip),
+    result,
   );
 });
 const retention = catchAsyncError(async (req, res) =>
@@ -37,4 +39,14 @@ const retention = catchAsyncError(async (req, res) =>
     await s.enforceRetention(),
   ),
 );
-module.exports = { list, history, get, create, restore, retention };
+const settings = catchAsyncError(async (req, res) => successResponse(res, 200, "Lịch sao lưu", {
+  ...await require("../service/backupSettings.service").get(),
+  next_run: require("../service/backupScheduler.service").getNextRun(),
+}));
+const saveSettings = catchAsyncError(async (req, res) => {
+  const config = await require("../service/backupSettings.service").save(req.body, req.user, req.ip);
+  const scheduler = require("../service/backupScheduler.service");
+  await scheduler.start();
+  return successResponse(res, 200, "Đã lưu lịch sao lưu", { ...config, next_run: scheduler.getNextRun() });
+});
+module.exports = { list, history, get, create, restore, retention, settings, saveSettings };

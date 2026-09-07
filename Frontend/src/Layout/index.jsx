@@ -23,6 +23,7 @@ const nav = [
   },
   { to: "/admin/security", icon: "shield", label: "Bảo mật", roles: ["ADMIN"] },
   { to: "/admin/profile", icon: "users", label: "Thông tin cá nhân" },
+  { to: "/admin/backups", icon: "box", label: "Sao lưu & phục hồi", roles: ["ADMIN"] },
 ];
 
 export default function AdminLayout() {

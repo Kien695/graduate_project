@@ -34,7 +34,7 @@ const updateSecurityLevel = catchAsyncError(async (req, res) => {
     res,
     200,
     "Cập nhật nhãn bảo mật thành công",
-    await userService.setSecurityLevel(req.params.id, req.body.securityLevelId),
+    await userService.setSecurityLevel(req.params.id, req.body.securityLevelId, req.user, req.ip),
   );
 });
 const lock = catchAsyncError(async (req, res) =>

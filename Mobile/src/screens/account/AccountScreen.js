@@ -1,7 +1,7 @@
 import { useEffect, useState } from 'react';
 import { Ionicons } from '@expo/vector-icons';
 import {
-  Alert, ActivityIndicator, Image, ScrollView, StyleSheet, Text, TextInput, TouchableOpacity, View,
+  Alert, ActivityIndicator, Image, Platform, ScrollView, StyleSheet, Text, TextInput, TouchableOpacity, View,
 } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { useDispatch } from 'react-redux';
@@ -107,10 +107,17 @@ export default function AccountScreen({ navigation }) {
     try { await dispatch(logout()).unwrap(); }
     finally { setLoggingOut(false); }
   };
-  const confirmLogout = () => Alert.alert('Đăng xuất', 'Bạn có chắc muốn đăng xuất khỏi thiết bị này?', [
-    { text: 'Hủy', style: 'cancel' },
-    { text: 'Đăng xuất', style: 'destructive', onPress: performLogout },
-  ]);
+  const confirmLogout = () => {
+    const message = 'Bạn có chắc muốn đăng xuất khỏi thiết bị này?';
+    if (Platform.OS === 'web') {
+      if (globalThis.confirm(message)) void performLogout();
+      return;
+    }
+    Alert.alert('Đăng xuất', message, [
+      { text: 'Hủy', style: 'cancel' },
+      { text: 'Đăng xuất', style: 'destructive', onPress: performLogout },
+    ]);
+  };
 
   const initial = (user?.full_name || user?.email || 'K').trim().charAt(0).toUpperCase();
   return <SafeAreaView style={styles.safe} edges={['top']}>

@@ -114,14 +114,25 @@ const updateMe = (id, input) =>
     return getById(id, client);
   });
 
-const setSecurityLevel = async (id, securityLevelId) => {
-  const { rows } = await database.query(
-    "UPDATE users SET security_level_id=$2,updated_at=NOW() WHERE id=$1 RETURNING id,email,security_level_id",
-    [id, securityLevelId],
-  );
-  if (!rows[0]) throw new ErrorHandler("Khong tim thay nguoi dung", 404);
-  return rows[0];
-};
+const setSecurityLevel = (id, securityLevelId, actor, ipAddress) =>
+  withTransaction(async (client) => {
+    const levelId = Number(securityLevelId);
+    if (!Number.isInteger(levelId) || levelId <= 0)
+      throw new ErrorHandler("Nhan bao mat khong hop le", 400);
+    const level = await client.query("SELECT id FROM security_levels WHERE id=$1", [levelId]);
+    if (!level.rows[0]) throw new ErrorHandler("Nhan bao mat khong hop le", 400);
+    const old = await client.query("SELECT security_level_id FROM users WHERE id=$1 FOR UPDATE", [id]);
+    if (!old.rows[0]) throw new ErrorHandler("Khong tim thay nguoi dung", 404);
+    const { rows } = await client.query(
+      "UPDATE users SET security_level_id=$2,updated_at=NOW() WHERE id=$1 RETURNING id,email,security_level_id",
+      [id, levelId],
+    );
+    await require("./auditLog.service").record(client, {
+      userId: actor.id, action: "SECURITY_LEVEL", entityType: "user", entityId: id,
+      oldValues: old.rows[0], newValues: { security_level_id: levelId }, ipAddress,
+    });
+    return rows[0];
+  });
 
 const updateAvatar = async (user, file) => {
   const reservation = await storageQuota.reserveForUser(user, file.size);

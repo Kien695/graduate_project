@@ -6,13 +6,9 @@ const notification = require("./notification.service");
 
 const list = async (user) => {
   const values = [user.id];
-  const access = `WHERE COALESCE(sl.rank,0) <= COALESCE(
-      (SELECT us.rank FROM users ux LEFT JOIN security_levels us ON us.id = ux.security_level_id WHERE ux.id = $1), 0
-    )
-    AND mac_categories_dominate(
-      (SELECT categories FROM users WHERE id = $1),
-      c.categories
-    )`;
+  const access = `WHERE sl.rank <= (
+    SELECT us.rank FROM users ux JOIN security_levels us ON us.id=ux.security_level_id WHERE ux.id=$1
+  )`;
   const { rows } = await database.query(
     `SELECT c.*,o.customer_id,o.vehicle_id,o.total_amount order_total_amount,
     cu.full_name customer_name,v.brand vehicle_brand,v.model vehicle_model,v.vin,
@@ -57,11 +53,7 @@ const get = async (id) => {
   return { ...rows[0], payments: payments.rows };
 };
 
-// classification = { levelId, categoryIds } — đã được middleware
-// enforceContractCreate xác thực xong (level do subject chi phối, categories
-// tồn tại và được subject chi phối). Service KHÔNG tự tính hay validate lại
-// nhãn nữa, chỉ dùng đúng giá trị này để tránh lệch với cái middleware đã
-// kiểm tra.
+// Classification is validated by the MAC middleware.
 const create = (input, classification, user, ipAddress) =>
   withTransaction(async (client) => {
     if (!classification)
@@ -80,8 +72,8 @@ const create = (input, classification, user, ipAddress) =>
     const number = input.contract_number || `HD-${Date.now()}`;
     const { rows } = await client.query(
       `INSERT INTO contracts(order_id, customer_id, contract_number, total_amount, terms,
-     security_level_id, categories, status)
-   VALUES($1,$2,$3,$4,$5,$6,$7,'draft') RETURNING *`,
+     security_level_id, status)
+   VALUES($1,$2,$3,$4,$5,$6,'draft') RETURNING *`,
       [
         input.order_id,
         order.rows[0].customer_id,
@@ -89,7 +81,6 @@ const create = (input, classification, user, ipAddress) =>
         order.rows[0].total_amount,
         input.terms || null,
         classification.levelId,
-        classification.categoryIds,
       ],
     );
     await auditLog.record(client, {
@@ -235,11 +226,7 @@ const addPayment = (id, input, user, ipAddress) =>
     return rows[0];
   });
 
-// classification = { levelId, categoryIds } — đã được middleware
-// enforceContractSecurityChange xác thực xong (subject chi phối cả nhãn cũ
-// lẫn nhãn mới của hợp đồng này). Không còn tự query lại security_levels để
-// validate — đó là việc của middleware, làm lại ở đây là trùng lặp và có
-// nguy cơ hai nơi lệch thông báo lỗi với nhau theo thời gian.
+// Classification is validated by the MAC middleware.
 const setSecurityLevel = (id, classification, user, ipAddress) =>
   withTransaction(async (client) => {
     if (!classification)
@@ -252,9 +239,9 @@ const setSecurityLevel = (id, classification, user, ipAddress) =>
     if (!old.rows[0]) throw new ErrorHandler("Không tìm thấy hợp đồng", 404);
 
     const { rows } = await client.query(
-      `UPDATE contracts SET security_level_id=$2, categories=$3, updated_at=NOW()
+      `UPDATE contracts SET security_level_id=$2, updated_at=NOW()
        WHERE id=$1 RETURNING *`,
-      [id, classification.levelId, classification.categoryIds],
+      [id, classification.levelId],
     );
     await auditLog.record(client, {
       userId: user.id,
@@ -263,11 +250,9 @@ const setSecurityLevel = (id, classification, user, ipAddress) =>
       entityId: id,
       oldValues: {
         security_level_id: old.rows[0].security_level_id,
-        categories: old.rows[0].categories,
       },
       newValues: {
         security_level_id: classification.levelId,
-        categories: classification.categoryIds,
       },
       ipAddress,
     });

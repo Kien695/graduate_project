@@ -20,7 +20,7 @@ const record = async (
   );
 };
 
-const list = async ({ entityType, entityId, userId, page = 1, limit = 20 }) => {
+const list = async ({ entityType, entityId, userId, page = 1, limit = 20 }, actor) => {
   limit = Math.min(Math.max(Number(limit) || 20, 1), 100);
   page = Math.max(Number(page) || 1, 1);
   const conditions = [];
@@ -36,6 +36,15 @@ const list = async ({ entityType, entityId, userId, page = 1, limit = 20 }) => {
   if (userId) {
     values.push(userId);
     conditions.push(`user_id=$${values.length}`);
+  }
+  if (actor) {
+    values.push(actor.id);
+    conditions.push(`(a.entity_type IS DISTINCT FROM 'contract' OR EXISTS (
+      SELECT 1 FROM contracts c JOIN security_levels object_level ON object_level.id=c.security_level_id
+      JOIN users subject ON subject.id=$${values.length}
+      JOIN security_levels subject_level ON subject_level.id=subject.security_level_id
+      WHERE c.id::text=a.entity_id AND subject_level.rank >= object_level.rank
+    ))`);
   }
   values.push(limit, (page - 1) * limit);
   const { rows } = await database.query(

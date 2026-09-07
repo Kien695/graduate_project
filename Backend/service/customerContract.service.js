@@ -33,15 +33,18 @@ const contractSelect = `
   JOIN orders o ON o.id = c.order_id
   JOIN customers cu ON cu.id = o.customer_id
   JOIN users u ON u.id = cu.user_id
-  LEFT JOIN security_levels subject_level ON subject_level.id=u.security_level_id
-  LEFT JOIN security_levels object_level ON object_level.id=c.security_level_id
+  JOIN security_levels subject_level ON subject_level.id=u.security_level_id
+  JOIN security_levels object_level ON object_level.id=c.security_level_id
   JOIN vehicles v ON v.id = o.vehicle_id`;
+
+// Ownership and publication never bypass mandatory security labels.
+const publishedContract = "UPPER(c.status) IN ('APPROVED', 'SIGNED', 'COMPLETED') AND subject_level.rank >= object_level.rank";
 
 const list = async (userId) => {
   const { rows } = await database.query(
     `${contractSelect}
      WHERE cu.user_id=$1
-       AND COALESCE(subject_level.rank,0)>=COALESCE(object_level.rank,0)
+       AND ${publishedContract}
      ORDER BY c.created_at DESC`,
     [userId],
   );
@@ -52,7 +55,7 @@ const get = async (id, userId, executor = database) => {
   const { rows } = await executor.query(
     `${contractSelect}
      WHERE c.id=$1 AND cu.user_id=$2
-       AND COALESCE(subject_level.rank,0)>=COALESCE(object_level.rank,0)`,
+       AND ${publishedContract}`,
     [id, userId],
   );
   if (!rows[0]) throw new ErrorHandler("Không tìm thấy hợp đồng", 404);
@@ -66,7 +69,11 @@ const confirm = (id, userId, ipAddress) =>
        FROM contracts c
        JOIN orders o ON o.id=c.order_id
        JOIN customers cu ON cu.id=o.customer_id
+       JOIN users u ON u.id=cu.user_id
+       JOIN security_levels subject_level ON subject_level.id=u.security_level_id
+       JOIN security_levels object_level ON object_level.id=c.security_level_id
        WHERE c.id=$1 AND cu.user_id=$2
+         AND subject_level.rank >= object_level.rank
        FOR UPDATE OF c`,
       [id, userId],
     );

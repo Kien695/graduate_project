@@ -42,8 +42,8 @@ const registerCustomer = async (input) => {
       const { rows } = await client.query(
         `INSERT INTO users(
            username,password_hash,role,email,phone,email_encrypted,phone_encrypted,
-           email_lookup_hash,full_name,status,is_active,is_locked,failed_login_attempts
-         ) VALUES($1,$2,'CUSTOMER',NULL,NULL,$3,$4,$5,$6,'ACTIVE',TRUE,FALSE,0)
+           email_lookup_hash,full_name,status,is_active,is_locked,failed_login_attempts,security_level_id
+         ) VALUES($1,$2,'CUSTOMER',NULL,NULL,$3,$4,$5,$6,'ACTIVE',TRUE,FALSE,0,(SELECT id FROM security_levels WHERE name='PUBLIC'))
          RETURNING id`,
         [
           `customer-${crypto.randomUUID()}`,

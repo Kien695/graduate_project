@@ -84,6 +84,7 @@ export const createEntitySlice = ({ name, endpoint }) => {
           state.items = Array.isArray(action.payload)
             ? action.payload
             : action.payload?.items || [];
+          state.total = action.payload?.total ?? state.items.length;
         })
         .addCase(fetchAll.rejected, (state, action) => {
           state.loading = false;

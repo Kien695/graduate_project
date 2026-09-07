@@ -21,6 +21,10 @@ const resolveCustomerId = async (req) => {
 };
 
 r.use(auth);
+r.patch("/:id/unlock", authorize("admin"), catchAsyncError(async (req, res) =>
+  successResponse(res, 200, "Đã mở khóa tài khoản khách hàng",
+    await require("../service/customerAccount.service").unlock(req.params.id, req.user, req.ip)),
+));
 r.get("/", authorize("admin", "manager", "staff"), c.list);
 r.post("/", authorize("admin", "manager", "staff"), c.create);
 r.get(

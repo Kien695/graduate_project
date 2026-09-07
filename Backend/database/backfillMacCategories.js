@@ -148,7 +148,7 @@ async function apply() {
   const orphanAdmins = await database.query(
     `SELECT u.id, u.role FROM users u
      LEFT JOIN employees e ON e.user_id = u.id
-     WHERE u.role IN ('admin','manager') AND e.id IS NULL AND u.categories = '{}'`,
+     WHERE UPPER(u.role) IN ('ADMIN','MANAGER') AND e.id IS NULL AND u.categories = '{}'`,
   );
   if (orphanAdmins.rows.length) {
     const allCategoryIds = [...codeToId.values()];

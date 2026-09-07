@@ -6,6 +6,8 @@ r.use(auth, authorize("admin"));
 r.get("/", c.list);
 r.post("/", c.create);
 r.get("/history", c.history);
+r.get("/settings", c.settings);
+r.put("/settings", c.saveSettings);
 r.post("/retention", c.retention);
 r.get("/:id", c.get);
 r.post("/:id/restore", c.restore);
