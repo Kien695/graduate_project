@@ -7,7 +7,9 @@ const validate = async () => {
   const client = await database.connect();
   try {
     await client.query("BEGIN");
-    await client.query(fs.readFileSync(path.join(__dirname, "schema.sql"), "utf8"));
+    await client.query(
+      fs.readFileSync(path.join(__dirname, "schema.sql"), "utf8"),
+    );
     const checks = [
       "SELECT id,email,full_name,role,security_level_id,is_locked,is_active,avatar_url,avatar_public_id,avatar_size_bytes FROM users LIMIT 0",
       "SELECT id,user_id,employee_code,full_name,phone,email,position,department,created_at,updated_at FROM employees LIMIT 0",
@@ -55,4 +57,7 @@ const validate = async () => {
     await database.end();
   }
 };
-validate().catch((error) => { console.error("Schema validation failed:", error.message); process.exitCode=1; });
+validate().catch((error) => {
+  console.error("Schema validation failed:", error.message);
+  process.exitCode = 1;
+});
