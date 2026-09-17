@@ -18,6 +18,14 @@ const get = catchAsyncError(async (req, res) =>
     await service.get(req.params.id, req.user.id),
   ),
 );
+const unreadCount = catchAsyncError(async (req, res) =>
+  successResponse(
+    res,
+    200,
+    "Lấy số thông báo chưa đọc thành công",
+    await service.unreadCount(req.user.id),
+  ),
+);
 const markRead = catchAsyncError(async (req, res) =>
   successResponse(
     res,
@@ -27,4 +35,4 @@ const markRead = catchAsyncError(async (req, res) =>
   ),
 );
 
-module.exports = { list, get, markRead };
+module.exports = { list, get, unreadCount, markRead };

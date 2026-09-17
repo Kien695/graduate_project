@@ -2,6 +2,12 @@
 import axios from 'axios';
 import { storage } from '../utils/storage';
 import { STORAGE_KEYS } from '../utils/constants';
+// KHÔNG import store/authSlice tĩnh ở đây: store/index.js -> authSlice.js ->
+// auth.api.js -> client.js (file này) là 1 vòng require. Nếu import tĩnh,
+// lúc app khởi động configureStore() có thể nhận authReducer là undefined
+// (vì authSlice.js chưa chạy xong) và throw ngay, khiến AppRegistry không kịp
+// đăng ký root component ("main has not been registered"). Dùng require()
+// trễ bên trong hàm để chỉ resolve sau khi toàn bộ module đã tải xong.
 
 
 const client = axios.create({
@@ -45,9 +51,13 @@ client.interceptors.response.use(
         request.headers.Authorization = `Bearer ${newToken}`;
         return client(request);
       } catch (refreshError) {
-        // Refresh thất bại → phiên hết hạn hoặc bị thu hồi (vd: đăng nhập thiết bị mới)
+        // Refresh thất bại → phiên hết hạn hoặc bị thu hồi (vd: đăng nhập thiết bị mới,
+        // idle timeout). Xóa SecureStore VÀ báo Redux ngay để RootNavigator chuyển về
+        // Login tức thì — chỉ xóa storage thì Redux không biết, màn hình chính vẫn hiển thị.
         await storage.clearAuth();
-        // Không tự điều hướng ở đây — để RootNavigator tự chuyển về Login khi isAuthenticated đổi
+        const { store } = require('../store');
+        const { sessionExpired } = require('../store/slices/authSlice');
+        store.dispatch(sessionExpired());
         return Promise.reject(refreshError);
       }
     }

@@ -43,6 +43,14 @@ const get = async (id, userId) => {
   return rows[0];
 };
 
+const unreadCount = async (userId) => {
+  const { rows } = await database.query(
+    "SELECT COUNT(*)::int AS count FROM notifications WHERE user_id=$1 AND is_read=FALSE",
+    [userId],
+  );
+  return { count: rows[0].count };
+};
+
 const markRead = async (id, userId) => {
   const { rows } = await database.query(
     `UPDATE notifications SET is_read=TRUE,updated_at=NOW()
@@ -53,4 +61,4 @@ const markRead = async (id, userId) => {
   return rows[0];
 };
 
-module.exports = { create, createForCustomer, list, get, markRead };
+module.exports = { create, createForCustomer, list, get, unreadCount, markRead };

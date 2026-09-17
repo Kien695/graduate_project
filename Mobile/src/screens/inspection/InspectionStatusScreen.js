@@ -1,17 +1,215 @@
-import { useCallback, useEffect, useState } from 'react';
-import { ActivityIndicator, StyleSheet, Text, TouchableOpacity, View } from 'react-native';
-import { Ionicons } from '@expo/vector-icons';
-import { SafeAreaView } from 'react-native-safe-area-context';
-import { getOrderInspection } from '../../api/inspection.api';
-import InspectionStatusBadge from '../../components/inspection/InspectionStatusBadge';
-import { COLORS, SHADOW } from '../../utils/theme';
+import { useCallback, useEffect, useState } from "react";
+import {
+  ActivityIndicator,
+  StyleSheet,
+  Text,
+  TouchableOpacity,
+  View,
+} from "react-native";
+import { Ionicons } from "@expo/vector-icons";
+import { SafeAreaView } from "react-native-safe-area-context";
+import { getOrderInspection } from "../../api/inspection.api";
+import InspectionStatusBadge from "../../components/inspection/InspectionStatusBadge";
+import { SHADOW } from "../../utils/theme";
+import { useTheme } from "../../hooks/useTheme";
 
-const InfoRow = ({ icon, label, children }) => <View style={styles.row}><View style={styles.icon}><Ionicons name={icon} size={18} color={COLORS.primary} /></View><View style={styles.rowBody}><Text style={styles.label}>{label}</Text>{children}</View></View>;
 export default function InspectionStatusScreen({ navigation, route }) {
-  const [inspection, setInspection] = useState(null); const [loading, setLoading] = useState(true); const [error, setError] = useState('');
-  const load = useCallback(async () => { try { setError(''); setInspection(await getOrderInspection(route.params.orderId)); } catch (requestError) { setError(requestError.response?.data?.message || 'Không thể tải trạng thái kiểm định.'); } finally { setLoading(false); } }, [route.params.orderId]);
-  useEffect(() => { load(); }, [load]);
-  const date = inspection?.inspection_date ? new Date(inspection.inspection_date).toLocaleDateString('vi-VN') : 'Chưa có';
-  return <SafeAreaView style={styles.safe} edges={['top']}><View style={styles.header}><TouchableOpacity style={styles.back} onPress={() => navigation.goBack()}><Ionicons name="chevron-back" size={25} color={COLORS.text} /></TouchableOpacity><Text style={styles.title}>Kiểm định xe</Text><TouchableOpacity style={styles.back} onPress={load}><Ionicons name="refresh" size={21} color={COLORS.text} /></TouchableOpacity></View>{loading ? <View style={styles.center}><ActivityIndicator size="large" color={COLORS.primary} /></View> : error ? <View style={styles.center}><Ionicons name="alert-circle-outline" size={44} color={COLORS.primary} /><Text style={styles.error}>{error}</Text></View> : <View style={styles.content}><View style={styles.orderLine}><Text style={styles.orderLabel}>ĐƠN HÀNG</Text><Text style={styles.orderCode}>#DH{String(inspection.order_id).padStart(6, '0')}</Text></View><View style={[styles.card, SHADOW]}><View style={styles.vehicleIcon}><Ionicons name="car-sport" size={34} color={COLORS.primary} /></View><Text style={styles.vehicleLabel}>Xe</Text><Text style={styles.vehicle}>{inspection.brand} {inspection.model}</Text><View style={styles.divider} /><InfoRow icon="shield-checkmark-outline" label="Trạng thái"><InspectionStatusBadge status={inspection.status} /></InfoRow><InfoRow icon="calendar-outline" label="Ngày kiểm tra"><Text style={styles.value}>{date}</Text></InfoRow><InfoRow icon="document-text-outline" label="Ghi chú"><Text style={styles.note}>{inspection.note || 'Chưa có ghi chú từ nhân viên kiểm định.'}</Text></InfoRow></View><View style={styles.hint}><Ionicons name="information-circle-outline" size={18} color={COLORS.muted} /><Text style={styles.hintText}>Trạng thái được cập nhật bởi nhân viên kiểm định. Nhấn biểu tượng làm mới để xem kết quả mới nhất.</Text></View></View>}</SafeAreaView>;
+  const { colors } = useTheme();
+  const styles = getStyles(colors);
+  const InfoRow = ({ icon, label, children }) => (
+    <View style={styles.row}>
+      <View style={styles.icon}>
+        <Ionicons name={icon} size={18} color={colors.primary} />
+      </View>
+      <View style={styles.rowBody}>
+        <Text style={styles.label}>{label}</Text>
+        {children}
+      </View>
+    </View>
+  );
+  const [inspection, setInspection] = useState(null);
+  const [loading, setLoading] = useState(true);
+  const [error, setError] = useState("");
+  const load = useCallback(async () => {
+    try {
+      setError("");
+      setInspection(await getOrderInspection(route.params.orderId));
+    } catch (requestError) {
+      setError(
+        requestError.response?.data?.message ||
+          "Không thể tải trạng thái kiểm định.",
+      );
+    } finally {
+      setLoading(false);
+    }
+  }, [route.params.orderId]);
+  useEffect(() => {
+    load();
+  }, [load]);
+  const date = inspection?.inspection_date
+    ? new Date(inspection.inspection_date).toLocaleDateString("vi-VN")
+    : "Chưa có";
+  return (
+    <SafeAreaView style={styles.safe} edges={["top"]}>
+      <View style={styles.header}>
+        <TouchableOpacity
+          style={styles.back}
+          onPress={() => navigation.goBack()}
+        >
+          <Ionicons name="chevron-back" size={25} color={colors.text} />
+        </TouchableOpacity>
+        <Text style={styles.title}>Kiểm định xe</Text>
+        <TouchableOpacity style={styles.back} onPress={load}>
+          <Ionicons name="refresh" size={21} color={colors.text} />
+        </TouchableOpacity>
+      </View>
+      {loading ? (
+        <View style={styles.center}>
+          <ActivityIndicator size="large" color={colors.primary} />
+        </View>
+      ) : error ? (
+        <View style={styles.center}>
+          <Ionicons
+            name="alert-circle-outline"
+            size={44}
+            color={colors.primary}
+          />
+          <Text style={styles.error}>{error}</Text>
+        </View>
+      ) : (
+        <View style={styles.content}>
+          <View style={styles.orderLine}>
+            <Text style={styles.orderLabel}>ĐƠN HÀNG</Text>
+            <Text style={styles.orderCode}>
+              #DH{String(inspection.order_id).padStart(6, "0")}
+            </Text>
+          </View>
+          <View style={[styles.card, SHADOW]}>
+            <View style={styles.vehicleIcon}>
+              <Ionicons name="car-sport" size={34} color={colors.primary} />
+            </View>
+            <Text style={styles.vehicleLabel}>Xe</Text>
+            <Text style={styles.vehicle}>
+              {inspection.brand} {inspection.model}
+            </Text>
+            <View style={styles.divider} />
+            <InfoRow icon="shield-checkmark-outline" label="Trạng thái">
+              <InspectionStatusBadge status={inspection.status} />
+            </InfoRow>
+            <InfoRow icon="calendar-outline" label="Ngày kiểm tra">
+              <Text style={styles.value}>{date}</Text>
+            </InfoRow>
+            <InfoRow icon="document-text-outline" label="Ghi chú">
+              <Text style={styles.note}>
+                {inspection.note || "Chưa có ghi chú từ nhân viên kiểm định."}
+              </Text>
+            </InfoRow>
+          </View>
+          <View style={styles.hint}>
+            <Ionicons
+              name="information-circle-outline"
+              size={18}
+              color={colors.muted}
+            />
+            <Text style={styles.hintText}>
+              Trạng thái được cập nhật bởi nhân viên kiểm định. Nhấn biểu tượng
+              làm mới để xem kết quả mới nhất.
+            </Text>
+          </View>
+        </View>
+      )}
+    </SafeAreaView>
+  );
 }
-const styles = StyleSheet.create({ safe: { flex: 1, backgroundColor: COLORS.background }, header: { height: 60, paddingHorizontal: 15, flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', borderBottomWidth: 1, borderBottomColor: COLORS.border }, back: { width: 38, height: 38, alignItems: 'center', justifyContent: 'center' }, title: { color: COLORS.text, fontSize: 17, fontWeight: '900' }, center: { flex: 1, alignItems: 'center', justifyContent: 'center', padding: 24 }, error: { color: COLORS.muted, fontSize: 14, textAlign: 'center', marginTop: 12 }, content: { flex: 1, padding: 18 }, orderLine: { flexDirection: 'row', justifyContent: 'space-between', marginBottom: 12 }, orderLabel: { color: COLORS.muted, fontSize: 11, fontWeight: '800', letterSpacing: 1 }, orderCode: { color: COLORS.text, fontSize: 12, fontWeight: '900' }, card: { backgroundColor: COLORS.surface, borderWidth: 1, borderColor: COLORS.border, borderRadius: 20, padding: 18 }, vehicleIcon: { width: 58, height: 58, borderRadius: 17, backgroundColor: '#FFF0F0', alignItems: 'center', justifyContent: 'center', marginBottom: 14 }, vehicleLabel: { color: COLORS.muted, fontSize: 12 }, vehicle: { color: COLORS.text, fontSize: 22, fontWeight: '900', marginTop: 4, textTransform: 'capitalize' }, divider: { height: 1, backgroundColor: COLORS.border, marginVertical: 20 }, row: { flexDirection: 'row', paddingVertical: 11 }, icon: { width: 38, height: 38, borderRadius: 12, backgroundColor: COLORS.surfaceRaised, alignItems: 'center', justifyContent: 'center', marginRight: 12 }, rowBody: { flex: 1 }, label: { color: COLORS.muted, fontSize: 11.5, marginBottom: 7 }, value: { color: COLORS.text, fontSize: 15, fontWeight: '800' }, note: { color: COLORS.text, fontSize: 14, lineHeight: 21 }, hint: { flexDirection: 'row', marginTop: 18, paddingHorizontal: 4 }, hintText: { flex: 1, color: COLORS.muted, fontSize: 12, lineHeight: 18, marginLeft: 8 } });
+const getStyles = (colors) =>
+  StyleSheet.create({
+    safe: { flex: 1, backgroundColor: colors.background },
+    header: {
+      height: 60,
+      paddingHorizontal: 15,
+      flexDirection: "row",
+      alignItems: "center",
+      justifyContent: "space-between",
+      borderBottomWidth: 1,
+      borderBottomColor: colors.border,
+    },
+    back: {
+      width: 38,
+      height: 38,
+      alignItems: "center",
+      justifyContent: "center",
+    },
+    title: { color: colors.text, fontSize: 17, fontWeight: "900" },
+    center: {
+      flex: 1,
+      alignItems: "center",
+      justifyContent: "center",
+      padding: 24,
+    },
+    error: {
+      color: colors.muted,
+      fontSize: 14,
+      textAlign: "center",
+      marginTop: 12,
+    },
+    content: { flex: 1, padding: 18 },
+    orderLine: {
+      flexDirection: "row",
+      justifyContent: "space-between",
+      marginBottom: 12,
+    },
+    orderLabel: {
+      color: colors.muted,
+      fontSize: 11,
+      fontWeight: "800",
+      letterSpacing: 1,
+    },
+    orderCode: { color: colors.text, fontSize: 12, fontWeight: "900" },
+    card: {
+      backgroundColor: colors.surface,
+      borderWidth: 1,
+      borderColor: colors.border,
+      borderRadius: 20,
+      padding: 18,
+    },
+    vehicleIcon: {
+      width: 58,
+      height: 58,
+      borderRadius: 17,
+      backgroundColor: "#FFF0F0",
+      alignItems: "center",
+      justifyContent: "center",
+      marginBottom: 14,
+    },
+    vehicleLabel: { color: colors.muted, fontSize: 12 },
+    vehicle: {
+      color: colors.text,
+      fontSize: 22,
+      fontWeight: "900",
+      marginTop: 4,
+      textTransform: "capitalize",
+    },
+    divider: { height: 1, backgroundColor: colors.border, marginVertical: 20 },
+    row: { flexDirection: "row", paddingVertical: 11 },
+    icon: {
+      width: 38,
+      height: 38,
+      borderRadius: 12,
+      backgroundColor: colors.surfaceRaised,
+      alignItems: "center",
+      justifyContent: "center",
+      marginRight: 12,
+    },
+    rowBody: { flex: 1 },
+    label: { color: colors.muted, fontSize: 11.5, marginBottom: 7 },
+    value: { color: colors.text, fontSize: 15, fontWeight: "800" },
+    note: { color: colors.text, fontSize: 14, lineHeight: 21 },
+    hint: { flexDirection: "row", marginTop: 18, paddingHorizontal: 4 },
+    hintText: {
+      flex: 1,
+      color: colors.muted,
+      fontSize: 12,
+      lineHeight: 18,
+      marginLeft: 8,
+    },
+  });
