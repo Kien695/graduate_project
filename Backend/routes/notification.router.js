@@ -5,6 +5,7 @@ const { auth } = require('../middleware/auth.middleware');
 const router = express.Router();
 router.use(auth);
 router.get('/', controller.list);
+router.get('/unread-count', controller.unreadCount);
 router.get('/:id', controller.get);
 router.patch('/:id/read', controller.markRead);
 

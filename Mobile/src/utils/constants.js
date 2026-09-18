@@ -10,4 +10,5 @@ export const STORAGE_KEYS = {
   REFRESH_TOKEN: 'refreshToken',
   DEVICE_ID: 'deviceId',
   CURRENT_USER: 'currentUser',
+  THEME: 'themeMode',
 };

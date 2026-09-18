@@ -118,31 +118,26 @@ export default function ProfilePage() {
       setChangingPassword(false);
     }
   };
-  const logout = async () => {
-    await dispatch(logoutUser());
-    navigate("/admin/login", { replace: true });
-  };
-
   const initial = (user?.full_name || user?.email || "A")
     .charAt(0)
     .toUpperCase();
   return (
     <div className="mx-auto max-w-5xl space-y-6">
-      <section className="flex flex-col gap-5 rounded-2xl bg-slate-900 p-6 text-white sm:flex-row sm:items-center">
+      <section className="flex flex-col gap-5 rounded-2xl border border-slate-200 bg-white p-6 shadow-sm dark:border-slate-700 dark:bg-slate-800 sm:flex-row sm:items-center">
         <div className="flex flex-col items-center gap-2">
           <label className="group relative cursor-pointer">
             {avatarPreview || user?.avatar_url ? (
               <img
                 src={avatarPreview || user.avatar_url}
                 alt="Avatar"
-                className="h-20 w-20 rounded-full object-cover ring-4 ring-white/10"
+                className="h-20 w-20 rounded-full object-cover ring-4 ring-slate-100 dark:ring-slate-700"
               />
             ) : (
-              <div className="grid h-20 w-20 place-items-center rounded-full bg-blue-600 text-3xl font-black">
+              <div className="grid h-20 w-20 place-items-center rounded-full bg-blue-600 text-3xl font-black text-white">
                 {initial}
               </div>
             )}
-            <span className="absolute inset-0 grid place-items-center rounded-full bg-slate-950/60 text-[10px] font-bold opacity-0 transition group-hover:opacity-100">
+            <span className="absolute inset-0 grid place-items-center rounded-full bg-slate-950/60 text-[10px] font-bold text-white opacity-0 transition group-hover:opacity-100">
               Chọn ảnh
             </span>
             <input
@@ -164,20 +159,16 @@ export default function ProfilePage() {
           )}
         </div>
         <div className="flex-1">
-          <h1 className="text-2xl font-black">
+          <h1 className="text-2xl font-black text-slate-900 dark:text-white">
             {user?.full_name || "Tài khoản"}
           </h1>
-          <p className="mt-1 text-sm text-slate-300">{user?.email}</p>
-          <span className="mt-3 inline-block rounded-full bg-blue-500/20 px-3 py-1 text-xs font-bold text-blue-200">
+          <p className="mt-1 text-sm text-slate-500 dark:text-slate-400">
+            {user?.email}
+          </p>
+          <span className="mt-3 inline-block rounded-full bg-blue-50 px-3 py-1 text-xs font-bold text-blue-700 dark:bg-blue-950/40 dark:text-blue-300">
             {roleLabel[String(user?.role || "").toLowerCase()] || user?.role}
           </span>
         </div>
-        <button
-          onClick={logout}
-          className="rounded-xl border border-white/20 px-4 py-2.5 text-sm font-bold hover:bg-white/10"
-        >
-          Đăng xuất
-        </button>
       </section>
 
       <div className="grid gap-6 lg:grid-cols-2">

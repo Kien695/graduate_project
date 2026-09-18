@@ -13,7 +13,13 @@ import Pagination from "../common/Pagination";
 import LoadingState from "../common/LoadingState";
 import Modal from "../common/Modal";
 import StatusBadge from "../common/StatusBadge";
+import StatusFilter from "../common/StatusFilter";
 import { Icon } from "../common/Icons";
+
+const statusOptions = [
+  { value: "active", label: "Đang làm việc" },
+  { value: "inactive", label: "Đã vô hiệu hóa" },
+];
 
 const emptyForm = {
   employeeCode: "",
@@ -32,6 +38,7 @@ export default function EmployeeManager() {
     [loading, setLoading] = useState(true),
     [submitting, setSubmitting] = useState(false);
   const [search, setSearch] = useState(""),
+    [status, setStatus] = useState("all"),
     [page, setPage] = useState(1),
     [modal, setModal] = useState(false),
     [editing, setEditing] = useState(null),
@@ -67,14 +74,22 @@ export default function EmployeeManager() {
   }, []); // Initial API synchronization.
   const filtered = useMemo(
     () =>
-      items.filter((x) =>
-        [x.employee_code, x.full_name, x.email, x.department].some((v) =>
+      items.filter((x) => {
+        const matchesSearch = [
+          x.employee_code,
+          x.full_name,
+          x.email,
+          x.department,
+        ].some((v) =>
           String(v || "")
             .toLowerCase()
             .includes(search.toLowerCase()),
-        ),
-      ),
-    [items, search],
+        );
+        const matchesStatus =
+          status === "all" || (x.is_active ? "active" : "inactive") === status;
+        return matchesSearch && matchesStatus;
+      }),
+    [items, search, status],
   );
   const open = (item) => {
     setEditing(item || null);
@@ -139,6 +154,16 @@ export default function EmployeeManager() {
           setSearch(v);
           setPage(1);
         }}
+        filters={
+          <StatusFilter
+            value={status}
+            onChange={(v) => {
+              setStatus(v);
+              setPage(1);
+            }}
+            options={statusOptions}
+          />
+        }
         onAdd={() => open()}
         addLabel="Thêm nhân viên"
       >

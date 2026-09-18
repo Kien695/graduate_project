@@ -16,6 +16,7 @@ const thunks = {
 };
 const columns = [
   { key: "vin", label: "Số VIN", primary: true },
+  { key: "images", label: "Hình ảnh", type: "image" },
   { key: "brand", label: "Hãng xe" },
   { key: "model", label: "Mẫu xe" },
   { key: "manufacture_year", label: "Năm SX" },
@@ -44,6 +45,17 @@ const fields = [
   },
   { key: "description", label: "Mô tả", type: "textarea", full: true },
 ];
+const statusFilter = {
+  key: "status",
+  options: [
+    { value: "available", label: "Có sẵn" },
+    { value: "reserved", label: "Đã giữ chỗ" },
+    { value: "sold", label: "Đã bán" },
+    { value: "inspection", label: "Đang kiểm định" },
+    { value: "maintenance", label: "Bảo trì" },
+    { value: "inactive", label: "Ngừng hoạt động" },
+  ],
+};
 
 export default function VehicleManager() {
   return (
@@ -55,6 +67,7 @@ export default function VehicleManager() {
       thunks={thunks}
       columns={columns}
       fields={fields}
+      statusFilter={statusFilter}
       imageUpload={{ label: "Hình ảnh xe", multiple: true, maxFiles: 10 }}
     />
   );

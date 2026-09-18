@@ -19,9 +19,19 @@ app.use(express.json({ limit: "1mb" }));
 app.use(express.urlencoded({ extended: true }));
 app.use(cookieParser());
 app.use(requestMetrics);
+// Expo web (bản web cho khách hàng) mở bằng "localhost", còn Expo Go trên điện thoại
+// dùng IP LAN — cả 2 đều phải được phép vì cùng là MOBILE_URL, chỉ khác host.
+const mobileWebLocalOrigin = process.env.MOBILE_URL?.replace(
+  /^(https?:\/\/)[^:/]+(:\d+)?/,
+  (_, protocol, port) => `${protocol}localhost${port || ""}`,
+);
 app.use(
   cors({
-    origin: [process.env.FRONTEND_URL, process.env.MOBILE_URL],
+    origin: [
+      process.env.FRONTEND_URL,
+      process.env.MOBILE_URL,
+      mobileWebLocalOrigin,
+    ],
     credentials: true,
   }),
 );

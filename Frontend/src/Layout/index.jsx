@@ -6,10 +6,11 @@ import { Icon } from "../components/common/Icons";
 import UserMenu from "../components/common/UserMenu";
 import ThemeToggle from "../components/common/ThemeToggle";
 import { hasRole } from "../utils/adminAccess";
+import logo from "../assets/logoxe.jpg";
 
 const nav = [
   { to: "/admin/dashboard", icon: "dashboard", label: "Trang chủ" },
-  { to: "/admin/vehicles", icon: "car", label: "Xe trong kho" },
+  { to: "/admin/vehicles", icon: "car", label: "Xe" },
   { to: "/admin/accessories", icon: "box", label: "Phụ kiện" },
   { to: "/admin/orders", icon: "orders", label: "Đơn đặt hàng" },
   { to: "/admin/contracts", icon: "contract", label: "Hợp đồng" },
@@ -23,7 +24,12 @@ const nav = [
   },
   { to: "/admin/security", icon: "shield", label: "Bảo mật", roles: ["ADMIN"] },
   { to: "/admin/profile", icon: "users", label: "Thông tin cá nhân" },
-  { to: "/admin/backups", icon: "box", label: "Sao lưu & phục hồi", roles: ["ADMIN"] },
+  {
+    to: "/admin/backups",
+    icon: "box",
+    label: "Sao lưu & phục hồi",
+    roles: ["ADMIN"],
+  },
 ];
 
 export default function AdminLayout() {
@@ -45,12 +51,16 @@ export default function AdminLayout() {
         className={`fixed inset-y-0 left-0 z-40 flex w-64 flex-col bg-[#07192d] text-slate-300 shadow-2xl transition-transform lg:translate-x-0 ${open ? "translate-x-0" : "-translate-x-full"}`}
       >
         <div className="flex h-20 items-center gap-3 border-b border-white/10 px-6">
-          <div className="grid h-10 w-10 place-items-center rounded-xl bg-blue-600 text-white">
-            <Icon name="car" />
+          <div className="grid h-10 w-10 place-items-center overflow-hidden rounded-xl bg-blue-600 text-white">
+            <img
+              src={logo}
+              alt="Auto Car"
+              className="h-full w-full object-cover"
+            />
           </div>
           <div>
             <div className="text-sm font-black tracking-wider text-white">
-              AUTO DEALER
+              AUTO CAR
             </div>
             <div className="text-[10px] uppercase tracking-[.22em] text-blue-300">
               Management
@@ -74,7 +84,7 @@ export default function AdminLayout() {
         </nav>
         <button
           onClick={logout}
-          className="m-4 flex items-center gap-3 rounded-xl border border-white/10 px-4 py-3 text-sm font-semibold hover:bg-white/5"
+          className="m-4 flex items-center gap-3 rounded-xl border border-white/10 bg-rose-600 px-4 py-3 text-sm font-semibold text-white hover:bg-rose-700"
         >
           <Icon name="logout" />
           Đăng xuất

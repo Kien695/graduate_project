@@ -10,7 +10,15 @@ import {
 import TableShell from "../common/TableShell";
 import Pagination from "../common/Pagination";
 import StatusBadge from "../common/StatusBadge";
+import StatusFilter from "../common/StatusFilter";
 import LoadingState from "../common/LoadingState";
+
+const statusOptions = [
+  { value: "pending", label: "Đang chờ" },
+  { value: "confirmed", label: "Đã xác nhận" },
+  { value: "completed", label: "Hoàn tất" },
+  { value: "cancelled", label: "Đã hủy" },
+];
 const money = (n) =>
   new Intl.NumberFormat("vi-VN", {
     style: "currency",
@@ -21,6 +29,7 @@ export default function OrderManager() {
   const dispatch = useDispatch();
   const { items, loading, submitting, error } = useSelector((s) => s.orders);
   const [search, setSearch] = useState(""),
+    [status, setStatus] = useState("all"),
     [page, setPage] = useState(1);
   useEffect(() => {
     dispatch(fetchOrders());
@@ -30,10 +39,15 @@ export default function OrderManager() {
   }, [error]);
   const filtered = useMemo(
     () =>
-      items.filter((x) =>
-        JSON.stringify(x).toLowerCase().includes(search.toLowerCase()),
-      ),
-    [items, search],
+      items.filter((x) => {
+        const matchesSearch = JSON.stringify(x)
+          .toLowerCase()
+          .includes(search.toLowerCase());
+        const matchesStatus =
+          status === "all" || String(x.status).toLowerCase() === status;
+        return matchesSearch && matchesStatus;
+      }),
+    [items, search, status],
   );
   const act = async (thunk, id, label) => {
     try {
@@ -46,7 +60,20 @@ export default function OrderManager() {
       title="Danh sách đơn đặt hàng"
       subtitle="Theo dõi và xử lý vòng đời đơn hàng"
       search={search}
-      setSearch={setSearch}
+      setSearch={(value) => {
+        setSearch(value);
+        setPage(1);
+      }}
+      filters={
+        <StatusFilter
+          value={status}
+          onChange={(value) => {
+            setStatus(value);
+            setPage(1);
+          }}
+          options={statusOptions}
+        />
+      }
     >
       {loading ? (
         <LoadingState />

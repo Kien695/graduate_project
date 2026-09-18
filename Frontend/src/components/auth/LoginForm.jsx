@@ -45,27 +45,13 @@ export default function LoginForm() {
     }
   };
   return (
-    <form onSubmit={submit} className="mx-auto w-full max-w-md">
-      <div className="mb-9">
-        <div className="mb-7 flex items-center gap-3 lg:hidden">
-          <div className="grid h-11 w-11 place-items-center rounded-xl bg-blue-600 text-white">
-            <Icon name="car" />
-          </div>
-          <span className="font-black text-slate-950 dark:text-white">AUTO DEALER</span>
-        </div>
-        <p className="text-xs font-bold uppercase tracking-[.2em] text-blue-600">
-          Chào mừng trở lại
-        </p>
-        <h1 className="mt-3 text-3xl font-black tracking-tight text-slate-950 dark:text-white">
-          Đăng nhập
-        </h1>
-        <p className="mt-2 text-sm text-slate-500">
-          Vui lòng đăng nhập để tiếp tục quản lý hệ thống.
-        </p>
-      </div>
+    <form onSubmit={submit} className="mx-auto w-full">
+      <h1 className="mb-7 text-center text-3xl font-black tracking-tight text-white">
+        Đăng nhập
+      </h1>
       <div className="space-y-5">
         <label className="block">
-          <span className="mb-2 block text-sm font-semibold text-slate-700 dark:text-slate-300">
+          <span className="mb-2 block text-sm font-semibold text-slate-200">
             Email
           </span>
           <input
@@ -73,11 +59,11 @@ export default function LoginForm() {
             value={email}
             onChange={(e) => setEmail(e.target.value)}
             placeholder="admin@autodealer.com"
-            className="w-full rounded-xl border border-slate-200 px-4 py-3.5 text-sm outline-none transition focus:border-blue-500 focus:ring-4 focus:ring-blue-50 dark:border-slate-700 dark:bg-slate-800 dark:text-slate-100 dark:focus:ring-blue-950"
+            className="w-full rounded-xl border border-white/20 bg-white/10 px-4 py-3.5 text-sm text-white placeholder:text-slate-400 outline-none transition focus:border-blue-400 focus:ring-4 focus:ring-blue-500/20"
           />
         </label>
         <label className="block">
-          <span className="mb-2 block text-sm font-semibold text-slate-700 dark:text-slate-300">
+          <span className="mb-2 block text-sm font-semibold text-slate-200">
             Mật khẩu
           </span>
           <div className="relative">
@@ -86,37 +72,34 @@ export default function LoginForm() {
               value={password}
               onChange={(e) => setPassword(e.target.value)}
               placeholder="Nhập mật khẩu"
-              className="w-full rounded-xl border border-slate-200 px-4 py-3.5 pr-12 text-sm outline-none transition focus:border-blue-500 focus:ring-4 focus:ring-blue-50 dark:border-slate-700 dark:bg-slate-800 dark:text-slate-100 dark:focus:ring-blue-950"
+              className="w-full rounded-xl border border-white/20 bg-white/10 px-4 py-3.5 pr-12 text-sm text-white placeholder:text-slate-400 outline-none transition focus:border-blue-400 focus:ring-4 focus:ring-blue-500/20"
             />
             <button
               type="button"
               onClick={() => setShow(!show)}
-              className="absolute right-3 top-1/2 -translate-y-1/2 rounded-lg p-2 text-slate-400"
+              className="absolute right-3 top-1/2 -translate-y-1/2 rounded-lg p-2 text-slate-300"
             >
               <Icon name="eye" className="h-4 w-4" />
             </button>
           </div>
         </label>
         <div className="flex items-center justify-between text-xs">
-          <label className="flex items-center gap-2 text-slate-500">
+          <label className="flex items-center gap-2 text-slate-300">
             <input
               type="checkbox"
-              className="rounded border-slate-300 text-blue-600"
+              className="rounded border-white/30 bg-white/10 text-blue-600"
             />
             Ghi nhớ đăng nhập
           </label>
-          <span className="font-semibold text-blue-600">Quên mật khẩu?</span>
+          <span className="font-semibold text-blue-300">Quên mật khẩu?</span>
         </div>
         <button
           disabled={loading}
-          className="w-full rounded-xl bg-blue-600 py-3.5 text-sm font-bold text-white shadow-lg shadow-blue-200 transition hover:bg-blue-700 disabled:opacity-60"
+          className="w-full rounded-xl bg-blue-600 py-3.5 text-sm font-bold text-white shadow-lg shadow-blue-900/40 transition hover:bg-blue-700 disabled:opacity-60"
         >
           {loading ? "Đang đăng nhập..." : "Đăng nhập"}
         </button>
       </div>
-      <p className="mt-14 text-center text-xs text-slate-400">
-        © 2026 Auto Dealer Management System
-      </p>
     </form>
   );
 }
