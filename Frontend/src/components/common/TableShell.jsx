@@ -6,6 +6,7 @@ export default function TableShell({
   addLabel = "Thêm mới",
   search,
   setSearch,
+  filters,
   children,
 }) {
   return (
@@ -29,6 +30,7 @@ export default function TableShell({
               className="w-full bg-transparent py-2.5 text-sm outline-none dark:text-slate-100 dark:placeholder:text-slate-500"
             />
           </label>
+          {filters}
           {onAdd && (
             <button
               onClick={onAdd}

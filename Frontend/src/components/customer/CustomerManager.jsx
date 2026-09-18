@@ -6,6 +6,9 @@ import { toast } from "react-toastify";
 import TableShell from "../common/TableShell";
 import Pagination from "../common/Pagination";
 import LoadingState from "../common/LoadingState";
+import StatusFilter from "../common/StatusFilter";
+
+const statusOptions = [{ value: "locked", label: "Đang bị khóa" }];
 export default function CustomerManager() {
   const dispatch = useDispatch();
   const { items, loading, error, total = 0 } = useSelector((s) => s.customers);
@@ -51,24 +54,23 @@ export default function CustomerManager() {
   return (
     <TableShell
       title="Thông tin khách hàng"
-      subtitle="Danh sách khách hàng từ hệ thống PostgreSQL"
+      subtitle="Danh sách thông tin khách hàng"
       search={search}
       setSearch={(value) => {
         setSearch(value);
         setPage(1);
       }}
-    >
-      <label className="flex items-center gap-2 px-5 py-3 text-sm">
-        <input
-          type="checkbox"
-          checked={lockedOnly}
-          onChange={(event) => {
-            setLockedOnly(event.target.checked);
+      filters={
+        <StatusFilter
+          value={lockedOnly ? "locked" : "all"}
+          onChange={(value) => {
+            setLockedOnly(value === "locked");
             setPage(1);
           }}
+          options={statusOptions}
         />
-        Chỉ hiển thị tài khoản bị khóa
-      </label>
+      }
+    >
       {error && (
         <p role="alert" className="px-5 py-2 text-red-600">
           {error}

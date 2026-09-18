@@ -4,6 +4,7 @@ import { toast } from "react-toastify";
 import Modal from "./Modal";
 import Pagination from "./Pagination";
 import StatusBadge from "./StatusBadge";
+import StatusFilter from "./StatusFilter";
 import TableShell from "./TableShell";
 import LoadingState from "./LoadingState";
 import { Icon } from "./Icons";
@@ -21,11 +22,22 @@ const format = (value, type) => {
 };
 const renderCell = (item, column) => {
   const value = column.value ? column.value(item) : item[column.key];
-  return column.type === "status" ? (
-    <StatusBadge value={value} />
-  ) : (
-    format(value, column.type)
-  );
+  if (column.type === "status") return <StatusBadge value={value} />;
+  if (column.type === "image") {
+    const url = item.images?.[0]?.url;
+    return url ? (
+      <img
+        src={url}
+        alt=""
+        className="h-12 w-12 rounded-lg border border-slate-200 object-cover dark:border-slate-700"
+      />
+    ) : (
+      <div className="grid h-12 w-12 place-items-center rounded-lg bg-slate-100 text-[10px] text-slate-400 dark:bg-slate-900 dark:text-slate-500">
+        Không có
+      </div>
+    );
+  }
+  return format(value, column.type);
 };
 
 const toFormData = (payload, files) => {
@@ -46,12 +58,14 @@ export default function EntityManager({
   thunks,
   addLabel,
   imageUpload,
+  statusFilter,
 }) {
   const dispatch = useDispatch();
   const { items, loading, submitting, error } = useSelector(
     (state) => state[slice],
   );
   const [search, setSearch] = useState("");
+  const [status, setStatus] = useState("all");
   const [page, setPage] = useState(1);
   const [modal, setModal] = useState(false);
   const [editing, setEditing] = useState(null);
@@ -80,14 +94,21 @@ export default function EntityManager({
   );
   const filtered = useMemo(
     () =>
-      items.filter((item) =>
-        columns.some((column) =>
+      items.filter((item) => {
+        const matchesSearch = columns.some((column) =>
           String(item[column.key] ?? "")
             .toLowerCase()
             .includes(search.toLowerCase()),
-        ),
-      ),
-    [items, columns, search],
+        );
+        const matchesStatus =
+          !statusFilter ||
+          status === "all" ||
+          String(
+            statusFilter.value ? statusFilter.value(item) : item[statusFilter.key],
+          ).toLowerCase() === status;
+        return matchesSearch && matchesStatus;
+      }),
+    [items, columns, search, status, statusFilter],
   );
   const shown = filtered.slice((page - 1) * pageSize, page * pageSize);
 
@@ -181,6 +202,18 @@ export default function EntityManager({
         }}
         onAdd={() => open()}
         addLabel={addLabel}
+        filters={
+          statusFilter && (
+            <StatusFilter
+              value={status}
+              onChange={(value) => {
+                setStatus(value);
+                setPage(1);
+              }}
+              options={statusFilter.options}
+            />
+          )
+        }
       >
         {loading ? (
           <LoadingState />

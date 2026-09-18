@@ -10,11 +10,18 @@ import TableShell from "../common/TableShell";
 import Pagination from "../common/Pagination";
 import Modal from "../common/Modal";
 import StatusBadge from "../common/StatusBadge";
+import StatusFilter from "../common/StatusFilter";
 import LoadingState from "../common/LoadingState";
 import { Icon } from "../common/Icons";
 import InspectionDetailModal from "./InspectionDetailModal";
 
 const emptyForm = { contract_id: "", order_id: "", vehicle_id: "", notes: "" };
+const statusOptions = [
+  { value: "pending", label: "Đang chờ kiểm định" },
+  { value: "checking", label: "Đang kiểm định" },
+  { value: "passed", label: "Đã đạt" },
+  { value: "failed", label: "Không đạt" },
+];
 
 export default function InspectionManager() {
   const dispatch = useDispatch();
@@ -22,6 +29,7 @@ export default function InspectionManager() {
     (state) => state.inspections,
   );
   const [search, setSearch] = useState("");
+  const [status, setStatus] = useState("all");
   const [page, setPage] = useState(1);
   const [formOpen, setFormOpen] = useState(false);
   const [form, setForm] = useState(emptyForm);
@@ -39,10 +47,15 @@ export default function InspectionManager() {
 
   const filtered = useMemo(
     () =>
-      items.filter((item) =>
-        JSON.stringify(item).toLowerCase().includes(search.toLowerCase()),
-      ),
-    [items, search],
+      items.filter((item) => {
+        const matchesSearch = JSON.stringify(item)
+          .toLowerCase()
+          .includes(search.toLowerCase());
+        const matchesStatus =
+          status === "all" || String(item.status).toLowerCase() === status;
+        return matchesSearch && matchesStatus;
+      }),
+    [items, search, status],
   );
 
   const openCreate = async () => {
@@ -107,6 +120,16 @@ export default function InspectionManager() {
           setSearch(value);
           setPage(1);
         }}
+        filters={
+          <StatusFilter
+            value={status}
+            onChange={(value) => {
+              setStatus(value);
+              setPage(1);
+            }}
+            options={statusOptions}
+          />
+        }
         onAdd={openCreate}
         addLabel="Thêm kiểm định"
       >

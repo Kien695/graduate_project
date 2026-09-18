@@ -16,8 +16,17 @@ import TableShell from "../common/TableShell";
 import Pagination from "../common/Pagination";
 import Modal from "../common/Modal";
 import StatusBadge from "../common/StatusBadge";
+import StatusFilter from "../common/StatusFilter";
 import LoadingState from "../common/LoadingState";
 import { Icon } from "../common/Icons";
+
+const statusOptions = [
+  { value: "draft", label: "Chờ duyệt" },
+  { value: "approved", label: "Đã duyệt" },
+  { value: "signed", label: "Đã ký" },
+  { value: "completed", label: "Hoàn tất" },
+  { value: "cancelled", label: "Đã hủy" },
+];
 
 const money = (n) =>
   new Intl.NumberFormat("vi-VN", {
@@ -37,6 +46,7 @@ export default function ContractManager() {
   const dispatch = useDispatch();
   const { items, loading, submitting, error } = useSelector((s) => s.contracts);
   const [search, setSearch] = useState(""),
+    [status, setStatus] = useState("all"),
     [page, setPage] = useState(1),
     [formOpen, setFormOpen] = useState(false),
     [editing, setEditing] = useState(null),
@@ -67,8 +77,8 @@ export default function ContractManager() {
   }, [error]);
   const filtered = useMemo(
     () =>
-      items.filter((x) =>
-        [
+      items.filter((x) => {
+        const matchesSearch = [
           x.contract_number,
           x.customer_name,
           x.vehicle_brand,
@@ -78,9 +88,12 @@ export default function ContractManager() {
           String(v || "")
             .toLowerCase()
             .includes(search.toLowerCase()),
-        ),
-      ),
-    [items, search],
+        );
+        const matchesStatus =
+          status === "all" || String(x.status).toLowerCase() === status;
+        return matchesSearch && matchesStatus;
+      }),
+    [items, search, status],
   );
   const refresh = () => dispatch(fetchContracts());
   const run = async (thunk, payload, message) => {
@@ -189,6 +202,16 @@ export default function ContractManager() {
           setSearch(v);
           setPage(1);
         }}
+        filters={
+          <StatusFilter
+            value={status}
+            onChange={(v) => {
+              setStatus(v);
+              setPage(1);
+            }}
+            options={statusOptions}
+          />
+        }
         onAdd={openCreate}
         addLabel="Tạo hợp đồng"
       >
