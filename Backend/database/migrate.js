@@ -14,6 +14,9 @@ const migrate = async () => {
     await database.query(fs.readFileSync(
       path.join(__dirname, "migrations", "20260910_backup_settings.sql"), "utf8",
     ));
+    await database.query(fs.readFileSync(
+      path.join(__dirname, "migrations", "20260911_remove_legacy_mac_categories.sql"), "utf8",
+    ));
   } finally {
     await database.end();
   }

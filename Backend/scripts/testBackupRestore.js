@@ -36,6 +36,7 @@ const admin = new Pool({ host: process.env.DB_HOST, port: Number(process.env.DB_
     // Regression: archives made before the four-level cleanup contain SQL CHECK
     // functions that reference mac_categories under pg_restore's empty search_path.
     await database.query(fs.readFileSync(path.join(__dirname, "../database/migrations/20260908_add_mac_categories.sql"), "utf8"));
+    await database.query("CREATE TABLE backups(id integer); CREATE TABLE devices(id integer); CREATE TABLE mac_policy(id integer); CREATE TABLE server_monitoring(id integer)");
     const backup = require("../service/backup.service");
     record = await backup.create(actor.id);
     assert.equal(record.status,"completed");
@@ -44,6 +45,10 @@ const admin = new Pool({ host: process.env.DB_HOST, port: Number(process.env.DB_
     assert.equal((await database.query("SELECT value FROM restore_probe")).rows[0].value,"before backup");
     assert.equal((await backup.get(record.id)).status,"completed");
     assert.equal((await database.query("SELECT 1 FROM pg_constraint WHERE conname IN ('contracts_categories_valid','users_categories_valid','contracts_categories_not_empty')")).rowCount,0);
+    assert.equal((await database.query("SELECT to_regclass('public.mac_categories') AS name")).rows[0].name,null);
+    for (const name of ["backups", "devices", "mac_policy", "server_monitoring"])
+      assert.equal((await database.query("SELECT to_regclass($1) AS name", [`public.${name}`])).rows[0].name,null);
+    assert.equal((await database.query("SELECT COUNT(*)::int AS total FROM information_schema.columns WHERE table_schema='public' AND table_name IN ('users','contracts') AND column_name='categories'")).rows[0].total,0);
     assert.ok((await database.query("SELECT 1 FROM audit_logs WHERE action='RESTORE'")).rowCount);
     console.log("PASS: persistent settings, validation, rescheduling, real pg_dump/pg_restore and restore audit on isolated database.");
   } finally {
