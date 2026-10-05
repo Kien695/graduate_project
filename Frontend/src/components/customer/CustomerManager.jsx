@@ -1,4 +1,4 @@
-import { useEffect, useState } from "react";
+import { useEffect, useMemo, useState } from "react";
 import { useDispatch, useSelector } from "react-redux";
 import { fetchCustomers } from "../../redux/slices/customerSlice";
 import { patchData } from "../../utils/api";
@@ -19,16 +19,21 @@ export default function CustomerManager() {
   const [page, setPage] = useState(1);
   const [lockedOnly, setLockedOnly] = useState(false);
   const [unlocking, setUnlocking] = useState(null);
+  // Cho phép gõ "KH00007" (mã khách hiển thị trong bảng) để tìm bằng id thật.
+  const searchParam = useMemo(() => {
+    const match = /^kh0*(\d+)$/i.exec(search.trim());
+    return match ? match[1] : search;
+  }, [search]);
   useEffect(() => {
     dispatch(
       fetchCustomers({
         page,
         limit: 7,
-        search,
+        search: searchParam,
         locked: lockedOnly ? "true" : undefined,
       }),
     );
-  }, [dispatch, page, search, lockedOnly]);
+  }, [dispatch, page, searchParam, lockedOnly]);
   const unlock = async (customer) => {
     if (!window.confirm(`Mở khóa tài khoản của ${customer.full_name}?`)) return;
     setUnlocking(customer.id);
@@ -41,7 +46,7 @@ export default function CustomerManager() {
           fetchCustomers({
             page,
             limit: 7,
-            search,
+            search: searchParam,
             locked: lockedOnly ? "true" : undefined,
           }),
         ).unwrap();
@@ -97,13 +102,13 @@ export default function CustomerManager() {
               ))}
             </tr>
           </thead>
-          <tbody className="table-body">
+          <tbody className="table-body font-bold">
             {items.map((c) => (
               <tr key={c.id}>
-                <td className="font-bold text-slate-900">
+                <td className="text-slate-900">
                   KH{String(c.id).padStart(5, "0")}
                 </td>
-                <td className="font-semibold">{c.full_name}</td>
+                <td>{c.full_name}</td>
                 <td>{c.phone || "Dữ liệu được bảo vệ"}</td>
                 <td>{c.email || "—"}</td>
                 <td>{c.address || "Dữ liệu được bảo vệ"}</td>

@@ -5,6 +5,7 @@ const colors = {
   signed: "bg-teal-50 text-teal-700",
   passed: "bg-emerald-50 text-emerald-700",
   confirmed: "bg-cyan-50 text-cyan-700",
+  shipping: "bg-indigo-50 text-indigo-700",
   checking: "bg-blue-50 text-blue-700",
   reserved: "bg-amber-50 text-amber-700",
   pending: "bg-amber-50 text-amber-700",

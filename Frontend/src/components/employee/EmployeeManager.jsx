@@ -75,12 +75,7 @@ export default function EmployeeManager() {
   const filtered = useMemo(
     () =>
       items.filter((x) => {
-        const matchesSearch = [
-          x.employee_code,
-          x.full_name,
-          x.email,
-          x.department,
-        ].some((v) =>
+        const matchesSearch = [x.employee_code, x.full_name].some((v) =>
           String(v || "")
             .toLowerCase()
             .includes(search.toLowerCase()),
@@ -187,13 +182,13 @@ export default function EmployeeManager() {
                 ))}
               </tr>
             </thead>
-            <tbody className="table-body">
+            <tbody className="table-body font-bold">
               {filtered.slice((page - 1) * 7, page * 7).map((x) => (
                 <tr key={x.id}>
-                  <td className="font-bold text-slate-900 dark:text-white">
+                  <td className="text-slate-900 dark:text-white">
                     {x.employee_code}
                   </td>
-                  <td className="font-semibold">{x.full_name}</td>
+                  <td>{x.full_name}</td>
                   <td>
                     <div>{x.email}</div>
                     <div className="text-xs text-slate-400">

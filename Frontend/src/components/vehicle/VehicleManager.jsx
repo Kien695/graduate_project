@@ -67,6 +67,7 @@ export default function VehicleManager() {
       thunks={thunks}
       columns={columns}
       fields={fields}
+      searchKeys={["vin", "brand", "model"]}
       statusFilter={statusFilter}
       imageUpload={{ label: "Hình ảnh xe", multiple: true, maxFiles: 10 }}
     />

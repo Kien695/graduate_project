@@ -13,7 +13,7 @@ import {
 import { registerCustomer } from "../../api/auth.api";
 import AuthField from "../../components/auth/AuthField";
 import { authStyles } from "../../components/auth/authStyles";
-import background from "../../../assets/xe-dep.webp";
+import background from "../../../assets/xe-sieu.jpg";
 
 const initialForm = {
   name: "",

@@ -106,13 +106,6 @@ export default function AdminLayout() {
             >
               <Icon name="menu" />
             </button>
-            <div className="hidden items-center gap-2 rounded-xl bg-slate-100 px-4 dark:bg-slate-800 sm:flex">
-              <Icon name="search" className="h-4 w-4 text-slate-400" />
-              <input
-                className="w-64 bg-transparent py-2.5 text-sm outline-none dark:text-slate-100 dark:placeholder:text-slate-500"
-                placeholder="Tìm kiếm nhanh..."
-              />
-            </div>
           </div>
           <div className="flex items-center gap-4">
             <ThemeToggle />

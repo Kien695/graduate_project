@@ -124,7 +124,7 @@ const list = async (table, query = {}) => {
       table === "vehicles"
         ? `(brand ILIKE ${p} OR model ILIKE ${p} OR vin ILIKE ${p})`
         : table === "customers"
-          ? `(full_name ILIKE ${p})`
+          ? `(full_name ILIKE ${p} OR CAST(id AS TEXT) ILIKE ${p})`
           : `(name ILIKE ${p})`,
     );
   }

@@ -77,6 +77,7 @@ export default function AccessoryManager() {
       columns={columns}
       fields={fields}
       thunks={thunks}
+      searchKeys={["sku", "name"]}
       statusFilter={statusFilter}
       addLabel="Thêm phụ kiện"
       imageUpload={{ label: "Hình ảnh phụ kiện", multiple: true, maxFiles: 10 }}

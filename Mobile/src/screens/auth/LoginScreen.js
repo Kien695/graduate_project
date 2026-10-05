@@ -14,7 +14,7 @@ import { login, clearError } from "../../store/slices/authSlice";
 import { useAuth } from "../../hooks/useAuth";
 import AuthField from "../../components/auth/AuthField";
 import { authStyles } from "../../components/auth/authStyles";
-import background from "../../../assets/xe-dep.webp";
+import background from "../../../assets/xe-sieu.jpg";
 
 export default function LoginScreen({ navigation }) {
   const dispatch = useDispatch();
