@@ -135,10 +135,16 @@ export default function VehicleOrderManager() {
                     )}
                     {o.status === "confirmed" && (
                       <button
+                        disabled={o.inspection_status !== "passed"}
+                        title={
+                          o.inspection_status !== "passed"
+                            ? "Cần kiểm định đạt (PASS) mới được hoàn tất"
+                            : ""
+                        }
                         onClick={() =>
                           act(completeOrder, o.id, "Đã hoàn tất đơn")
                         }
-                        className="action-green"
+                        className="action-green disabled:cursor-not-allowed disabled:opacity-40"
                       >
                         Hoàn tất
                       </button>

@@ -4,7 +4,11 @@ const notification = require("./notification.service");
 const list = async (user) => {
   const own = user.role === "customer";
   const { rows } = await database.query(
-    `SELECT o.*,v.brand,v.model,c.full_name customer_name FROM orders o JOIN vehicles v ON v.id=o.vehicle_id JOIN customers c ON c.id=o.customer_id ${own ? "JOIN users u ON u.id=c.user_id WHERE u.id=$1" : ""} ORDER BY o.created_at DESC`,
+    `SELECT o.*,v.brand,v.model,c.full_name customer_name,
+      (SELECT LOWER(i.status) FROM inspections i WHERE i.order_id=o.id
+        ORDER BY i.created_at DESC LIMIT 1) inspection_status
+     FROM orders o JOIN vehicles v ON v.id=o.vehicle_id JOIN customers c ON c.id=o.customer_id
+ ${own ? "JOIN users u ON u.id=c.user_id WHERE u.id=$1" : ""} ORDER BY o.created_at DESC`,
     own ? [user.id] : [],
   );
   return rows;
@@ -72,6 +76,25 @@ const transition = (id, status, user) =>
     }
     if (!allowed[status].includes(o.rows[0].status))
       throw new ErrorHandler("Chuyển trạng thái đơn hàng không hợp lệ", 409);
+
+    if (status === "completed") {
+      const insp = await c.query(
+        `SELECT status FROM inspections
+     WHERE order_id=$1 ORDER BY created_at DESC LIMIT 1`,
+        [id],
+      );
+      if (!insp.rows[0])
+        throw new ErrorHandler(
+          "Đơn hàng chưa có phiếu kiểm định, không thể giao xe",
+          409,
+        );
+      if (String(insp.rows[0].status).toLowerCase() !== "passed")
+        throw new ErrorHandler(
+          "Xe chưa kiểm định đạt (PASS), không thể giao xe",
+          409,
+        );
+    }
+
     const { rows } = await c.query(
       "UPDATE orders SET status=$2,updated_at=NOW() WHERE id=$1 RETURNING *",
       [id, status],

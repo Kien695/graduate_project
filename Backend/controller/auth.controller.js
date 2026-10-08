@@ -36,6 +36,15 @@ const login = catchAsyncError(async (req, res) => {
   res.cookie("refreshToken", data.refreshToken, refreshCookieOptions());
   return successResponse(res, 200, "Đăng nhập thành công", data);
 });
+const lockStatus = catchAsyncError(async (req, res) => {
+  requireFields(req.body, ["email"]);
+  return successResponse(
+    res,
+    200,
+    "Lấy trạng thái khóa thành công",
+    await authService.getLockStatus(req.body.email),
+  );
+});
 const registerCustomer = catchAsyncError(async (req, res) => {
   const { name, email, phone, password, confirmPassword } = req.body;
   const errors = [];
@@ -123,6 +132,7 @@ const unlockAccount = catchAsyncError(async (req, res) =>
 );
 module.exports = {
   login,
+  lockStatus,
   registerCustomer,
   refreshToken,
   logout,

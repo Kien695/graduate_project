@@ -13,6 +13,7 @@ const {
   emailLookupHash,
 } = require("../utils/profileEncryption");
 const MAX_FAILURES = Number(process.env.MAX_FAILED_LOGIN_ATTEMPTS || 5);
+const LOCK_MINUTES = Number(process.env.ACCOUNT_LOCK_MINUTES || 30);
 
 const normalizeDeviceType = (deviceType, userAgent = "") => {
   const requested = String(deviceType || "")
@@ -78,6 +79,40 @@ const registerCustomer = async (input) => {
   }
 };
 
+// Dùng để màn hình đăng nhập tự dò lại trạng thái khóa, không cần mật khẩu —
+// để khách hàng không phải thoát app khi admin mở khóa giữa lúc đang đếm ngược.
+const getLockStatus = async (email) => {
+  const result = await database.query(
+    `SELECT is_locked,locked_until,failed_login_attempts FROM users
+     WHERE email_lookup_hash=$1 OR LOWER(email)=LOWER($2)`,
+    [emailLookupHash(email), email],
+  );
+  const user = result.rows[0];
+  if (!user) return { locked: false };
+  if (
+    user.is_locked &&
+    user.locked_until &&
+    new Date(user.locked_until) <= new Date()
+  ) {
+    await database.query(
+      `UPDATE users SET is_locked=FALSE,failed_login_attempts=0,
+         locked_until=NULL,updated_at=NOW() WHERE email_lookup_hash=$1`,
+      [emailLookupHash(email)],
+    );
+    return { locked: false };
+  }
+  const locked =
+    user.is_locked || (user.locked_until && new Date(user.locked_until) > new Date());
+  return locked
+    ? {
+        locked: true,
+        failedAttempts: user.failed_login_attempts,
+        maxAttempts: MAX_FAILURES,
+        lockedUntil: user.locked_until,
+      }
+    : { locked: false };
+};
+
 const login = (input) =>
   withTransaction(async (client) => {
     const result = await client.query(
@@ -110,19 +145,30 @@ const login = (input) =>
       user.is_locked ||
       (user.locked_until && new Date(user.locked_until) > new Date())
     )
-      throw new ErrorHandler("Tài khoản đang bị khóa", 423);
+      throw new ErrorHandler("Tài khoản đang bị khóa", 423, [], {
+        failedAttempts: user.failed_login_attempts,
+        maxAttempts: MAX_FAILURES,
+        lockedUntil: user.locked_until,
+      });
     if (!(await verifyPassword(input.password, user.password_hash))) {
       const failures = user.failed_login_attempts + 1;
       const locked = failures >= MAX_FAILURES;
+      const lockedUntil = locked
+        ? new Date(Date.now() + LOCK_MINUTES * 60000)
+        : null;
       await client.query(
-        "UPDATE users SET failed_login_attempts=$2,is_locked=$3,locked_until=CASE WHEN $3 THEN NOW()+INTERVAL '30 minutes' ELSE NULL END WHERE id=$1",
-        [user.id, failures, locked],
+        "UPDATE users SET failed_login_attempts=$2,is_locked=$3,locked_until=$4 WHERE id=$1",
+        [user.id, failures, locked, lockedUntil],
       );
       const loginError = new ErrorHandler(
         locked
           ? "Tài khoản đã bị khóa do đăng nhập sai nhiều lần"
           : "Email hoặc mật khẩu không đúng",
         locked ? 423 : 401,
+        [],
+        locked
+          ? { failedAttempts: failures, maxAttempts: MAX_FAILURES, lockedUntil }
+          : {},
       );
       loginError.commitTransaction = true;
       throw loginError;
@@ -289,6 +335,7 @@ const setLock = async (userId, locked) => {
 module.exports = {
   registerCustomer,
   login,
+  getLockStatus,
   refresh,
   logout,
   logoutAll,

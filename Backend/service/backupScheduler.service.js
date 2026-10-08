@@ -1,5 +1,6 @@
 const backup = require("./backup.service");
 const settings = require("./backupSettings.service");
+const { database } = require("../database/database");
 let timer;
 let generation = 0;
 let nextRun = null;
@@ -36,4 +37,25 @@ const start = async () => {
     console.error("Backup scheduling failed:", error.message);
   }
 };
-module.exports = { millisecondsUntilNextRun, start, getNextRun: () => nextRun };
+const catchUp = async () => {
+  try {
+    const config = await settings.get();
+    if (!config.enabled) return;
+    const { rows } = await database.query(
+      `SELECT 1 FROM backup_records
+       WHERE status='completed' AND created_at > NOW() - INTERVAL '24 hours' LIMIT 1`,
+    );
+    if (rows[0]) return;
+    console.log("Không có bản sao lưu trong 24 giờ qua, chạy bù ngay");
+    await backup.create(null);
+    await backup.enforceRetention();
+  } catch (error) {
+    console.error("Backup chạy bù thất bại:", error.message);
+  }
+};
+module.exports = {
+  millisecondsUntilNextRun,
+  start,
+  catchUp,
+  getNextRun: () => nextRun,
+};

@@ -35,12 +35,21 @@ export const login = createAsyncThunk(
       return data.user;
     } catch (error) {
       const status = error.response?.status;
-      const message = error.response?.data?.message;
+      const data = error.response?.data;
       if (status === 423)
-        return rejectWithValue("Tài khoản đang bị khóa. Vui lòng thử lại sau.");
+        return rejectWithValue({
+          message: data?.message || "Tài khoản đang bị khóa.",
+          failedAttempts: data?.failedAttempts,
+          maxAttempts: data?.maxAttempts,
+          lockedUntil: data?.lockedUntil,
+        });
       if (status === 401)
-        return rejectWithValue(message || "Sai email hoặc mật khẩu.");
-      return rejectWithValue(message || "Không thể kết nối tới hệ thống.");
+        return rejectWithValue({
+          message: data?.message || "Sai email hoặc mật khẩu.",
+        });
+      return rejectWithValue({
+        message: data?.message || "Không thể kết nối tới hệ thống.",
+      });
     }
   },
 );

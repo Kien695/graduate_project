@@ -87,6 +87,26 @@ const create = async (userId) => {
        WHERE id=$1`,
       [historyRecord.rows[0].id, stat.size],
     );
+    if (process.env.BACKUP_OFFSITE_DIR) {
+      try {
+        await fs.promises.mkdir(process.env.BACKUP_OFFSITE_DIR, {
+          recursive: true,
+        });
+        await fs.promises.copyFile(
+          filePath,
+          path.join(process.env.BACKUP_OFFSITE_DIR, fileName),
+        );
+      } catch (error) {
+        console.error("Sao chép backup ra ngoài thất bại:", error.message);
+        await audit.record(null, {
+          userId,
+          action: "BACKUP_OFFSITE_FAILED",
+          entityType: "backup_records",
+          entityId: inserted.rows[0].id,
+          newValues: { error: error.message },
+        });
+      }
+    }
     return rows[0];
   } catch (error) {
     await database.query(
@@ -111,14 +131,30 @@ const restore = async (id, userId, ipAddress) => {
     throw new ErrorHandler("File backup không hợp lệ", 400);
   try {
     await require("./restoreArchive")({
-      run, resolveTool: resolvePostgresTool, archive: resolved, directory: dir,
-      env: { ...process.env, PGHOST: process.env.DB_HOST, PGPORT: process.env.DB_PORT,
-        PGUSER: process.env.DB_USER, PGPASSWORD: process.env.DB_PASSWORD },
+      run,
+      resolveTool: resolvePostgresTool,
+      archive: resolved,
+      directory: dir,
+      env: {
+        ...process.env,
+        PGHOST: process.env.DB_HOST,
+        PGPORT: process.env.DB_PORT,
+        PGUSER: process.env.DB_USER,
+        PGPASSWORD: process.env.DB_PASSWORD,
+      },
     });
     // The dump captures its own backup record while still processing.
-    await database.query("UPDATE backup_records SET status='completed',size_bytes=$2 WHERE id=$1", [id, backup.size_bytes]);
-    await database.query("UPDATE backup_history SET status='completed',size=$2,completed_at=NOW() WHERE backup_record_id=$1", [id, backup.size_bytes]);
-    const actor = userId ? await database.query("SELECT id FROM users WHERE id=$1", [userId]) : { rows: [] };
+    await database.query(
+      "UPDATE backup_records SET status='completed',size_bytes=$2 WHERE id=$1",
+      [id, backup.size_bytes],
+    );
+    await database.query(
+      "UPDATE backup_history SET status='completed',size=$2,completed_at=NOW() WHERE backup_record_id=$1",
+      [id, backup.size_bytes],
+    );
+    const actor = userId
+      ? await database.query("SELECT id FROM users WHERE id=$1", [userId])
+      : { rows: [] };
     await audit.record(null, {
       userId: actor.rows[0]?.id || null,
       action: "RESTORE",
@@ -151,6 +187,10 @@ const enforceRetention = async () => {
     const resolved = path.resolve(record.file_path);
     if (path.dirname(resolved) !== dir) continue;
     if (fs.existsSync(resolved)) await fs.promises.unlink(resolved);
+    const offsite =
+      process.env.BACKUP_OFFSITE_DIR &&
+      path.join(process.env.BACKUP_OFFSITE_DIR, path.basename(resolved));
+    if (offsite && fs.existsSync(offsite)) await fs.promises.unlink(offsite);
     await database.query(
       "UPDATE backup_history SET status='expired' WHERE backup_record_id=$1",
       [record.id],
@@ -162,9 +202,26 @@ const enforceRetention = async () => {
 };
 
 let busy = false;
-const exclusive = (operation) => async (...args) => {
-  if (busy) throw new ErrorHandler("Đang có tác vụ sao lưu/phục hồi, vui lòng đợi hoàn tất", 409);
-  busy = true;
-  try { return await operation(...args); } finally { busy = false; }
+const exclusive =
+  (operation) =>
+  async (...args) => {
+    if (busy)
+      throw new ErrorHandler(
+        "Đang có tác vụ sao lưu/phục hồi, vui lòng đợi hoàn tất",
+        409,
+      );
+    busy = true;
+    try {
+      return await operation(...args);
+    } finally {
+      busy = false;
+    }
+  };
+module.exports = {
+  list,
+  history,
+  get,
+  create: exclusive(create),
+  restore: exclusive(restore),
+  enforceRetention: exclusive(enforceRetention),
 };
-module.exports = { list, history, get, create: exclusive(create), restore: exclusive(restore), enforceRetention: exclusive(enforceRetention) };
