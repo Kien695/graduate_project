@@ -59,7 +59,7 @@ export default function VehicleOrderManager() {
   return (
     <TableShell
       title="Danh sách đơn đặt hàng"
-      subtitle="Theo dõi và xử lý vòng đời đơn hàng"
+      subtitle=""
       search={search}
       setSearch={(value) => {
         setSearch(value);

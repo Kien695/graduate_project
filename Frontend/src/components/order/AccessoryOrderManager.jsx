@@ -63,7 +63,7 @@ export default function AccessoryOrderManager() {
   return (
     <TableShell
       title="Danh sách đơn hàng phụ kiện"
-      subtitle="Theo dõi và xử lý vòng đời đơn hàng phụ kiện"
+      subtitle=""
       search={search}
       setSearch={(value) => {
         setSearch(value);

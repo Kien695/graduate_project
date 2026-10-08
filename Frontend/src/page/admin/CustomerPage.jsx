@@ -5,7 +5,6 @@ export default function CustomerPage() {
     <>
       <PageHeader
         title="Quản lý khách hàng"
-        description="Thông tin khách hàng và hồ sơ giao dịch"
       />
       <CustomerManager />
     </>

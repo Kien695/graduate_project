@@ -5,7 +5,6 @@ export default function VehiclePage() {
     <>
       <PageHeader
         title="Quản lý xe"
-        description="Danh mục và trạng thái xe trong kho"
       />
       <VehicleManager />
     </>

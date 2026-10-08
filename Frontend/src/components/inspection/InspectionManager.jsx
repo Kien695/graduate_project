@@ -115,7 +115,7 @@ export default function InspectionManager() {
     <>
       <TableShell
         title="Kiểm định xe"
-        subtitle="Theo dõi checklist, kết quả và hình ảnh kiểm định"
+        subtitle=""
         search={search}
         setSearch={(value) => {
           setSearch(value);

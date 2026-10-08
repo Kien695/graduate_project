@@ -58,8 +58,11 @@ const registerCustomer = catchAsyncError(async (req, res) => {
     addError("email", "Email không đúng định dạng");
   if (!String(phone || "").trim())
     addError("phone", "Số điện thoại không được để trống");
-  else if (!/^(0\d{9}|\+84\d{9})$/.test(String(phone).trim()))
-    addError("phone", "Số điện thoại không hợp lệ");
+  else if (!/^(03|05|07|08|09)\d{8}$/.test(String(phone).trim()))
+    addError(
+      "phone",
+      "Số điện thoại phải có 10 số, bắt đầu bằng 03, 05, 07, 08 hoặc 09",
+    );
   if (!password) addError("password", "Mật khẩu không được để trống");
   else if (String(password).length < 6)
     addError("password", "Mật khẩu phải có ít nhất 6 ký tự");

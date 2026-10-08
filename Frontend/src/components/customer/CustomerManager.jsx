@@ -59,7 +59,7 @@ export default function CustomerManager() {
   return (
     <TableShell
       title="Thông tin khách hàng"
-      subtitle="Danh sách thông tin khách hàng"
+      subtitle=""
       search={search}
       setSearch={(value) => {
         setSearch(value);

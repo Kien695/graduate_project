@@ -102,7 +102,8 @@ const getLockStatus = async (email) => {
     return { locked: false };
   }
   const locked =
-    user.is_locked || (user.locked_until && new Date(user.locked_until) > new Date());
+    user.is_locked ||
+    (user.locked_until && new Date(user.locked_until) > new Date());
   return locked
     ? {
         locked: true,
@@ -122,8 +123,9 @@ const login = (input) =>
       [emailLookupHash(input.email), input.email],
     );
     const user = result.rows[0];
-    if (!user || !user.is_active)
-      throw new ErrorHandler("Email hoặc mật khẩu không đúng", 401);
+    if (!user) throw new ErrorHandler("Email hoặc mật khẩu không đúng", 401);
+    if (!user.is_active)
+      throw new ErrorHandler("Tài khoản của bạn đang bị khóa tạm thời!", 423);
     user.role = user.role?.toLowerCase();
     if (
       user.is_locked &&

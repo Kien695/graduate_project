@@ -188,7 +188,7 @@ export default function ContractManager() {
     <>
       <TableShell
         title="Danh sách hợp đồng"
-        subtitle="Tạo, duyệt, ký, thanh toán và quản lý bảo mật hợp đồng"
+        subtitle=""
         search={search}
         setSearch={(v) => {
           setSearch(v);

@@ -100,7 +100,7 @@ export default function LoginScreen({ navigation }) {
                 label="Email"
                 value={email}
                 onChangeText={setEmail}
-                placeholder="you@example.com"
+                placeholder="customer@gmail.com"
                 keyboardType="email-address"
                 autoCapitalize="none"
                 autoCorrect={false}

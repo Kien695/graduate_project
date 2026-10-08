@@ -5,7 +5,6 @@ export default function SecurityPage() {
     <>
       <PageHeader
         title="Bảo mật hệ thống"
-        description="Thiết bị đăng nhập, audit log và phân cấp MAC"
       />
       <SecurityManager />
     </>

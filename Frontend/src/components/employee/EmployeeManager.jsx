@@ -144,7 +144,7 @@ export default function EmployeeManager() {
     <>
       <TableShell
         title="Quản lý nhân viên"
-        subtitle="Tài khoản nhân viên và nhãn bảo mật MAC"
+        subtitle=""
         search={search}
         setSearch={(v) => {
           setSearch(v);
