@@ -186,6 +186,26 @@ const deactivate = (id, actor) =>
     return employee;
   });
 
+const activate = (id, actor) =>
+  withTransaction(async (client) => {
+    const old = await getById(id, client);
+    await client.query(
+      "UPDATE users SET is_active=TRUE,status='ACTIVE',updated_at=NOW() WHERE id=$1",
+      [old.user_id],
+    );
+    const employee = await getById(old.id, client);
+    await audit.record(client, {
+      userId: actor.userId,
+      action: "ACTIVATE",
+      entityType: "employees",
+      entityId: old.id,
+      oldValues: old,
+      newValues: employee,
+      ipAddress: actor.ipAddress,
+    });
+    return employee;
+  });
+
 const setSecurityLevel = (id, value, actor) =>
   withTransaction(async (client) => {
     const old = await getById(id, client);
@@ -213,5 +233,6 @@ module.exports = {
   create,
   update,
   deactivate,
+  activate,
   setSecurityLevel,
 };
