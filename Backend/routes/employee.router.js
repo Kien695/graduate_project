@@ -8,7 +8,8 @@ router.get("/", controller.list);
 router.get("/:id", controller.get);
 router.post("/", controller.create);
 router.put("/:id", controller.update);
-router.delete("/:id", controller.remove);
+router.post("/:id/lock", controller.lock);
+router.post("/:id/unlock", controller.unlock);
 router.patch("/:id/security-level", controller.updateSecurityLevel);
 
 module.exports = router;

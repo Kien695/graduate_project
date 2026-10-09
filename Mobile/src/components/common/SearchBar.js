@@ -5,6 +5,7 @@ import { useTheme } from "../../hooks/useTheme";
 export default function SearchBar({
   value,
   onChangeText,
+  onSubmitEditing,
   placeholder = "Tìm kiếm xe...",
 }) {
   const { colors } = useTheme();
@@ -15,6 +16,7 @@ export default function SearchBar({
       <TextInput
         value={value}
         onChangeText={onChangeText}
+        onSubmitEditing={onSubmitEditing}
         placeholder={placeholder}
         placeholderTextColor={colors.muted}
         style={styles.input}

@@ -5,7 +5,6 @@ export default function ContractPage() {
     <>
       <PageHeader
         title="Quản lý hợp đồng"
-        description="Duyệt, ký và theo dõi thanh toán"
       />
       <ContractManager />
     </>

@@ -78,17 +78,9 @@ export default function ContractManager() {
   const filtered = useMemo(
     () =>
       items.filter((x) => {
-        const matchesSearch = [
-          x.contract_number,
-          x.customer_name,
-          x.vehicle_brand,
-          x.vehicle_model,
-          x.status,
-        ].some((v) =>
-          String(v || "")
-            .toLowerCase()
-            .includes(search.toLowerCase()),
-        );
+        const matchesSearch = String(x.contract_number || "")
+          .toLowerCase()
+          .includes(search.toLowerCase());
         const matchesStatus =
           status === "all" || String(x.status).toLowerCase() === status;
         return matchesSearch && matchesStatus;
@@ -196,7 +188,7 @@ export default function ContractManager() {
     <>
       <TableShell
         title="Danh sách hợp đồng"
-        subtitle="Tạo, duyệt, ký, thanh toán và quản lý bảo mật hợp đồng"
+        subtitle=""
         search={search}
         setSearch={(v) => {
           setSearch(v);
@@ -235,10 +227,10 @@ export default function ContractManager() {
                 ))}
               </tr>
             </thead>
-            <tbody className="table-body">
+            <tbody className="table-body font-bold">
               {filtered.slice((page - 1) * 7, page * 7).map((c) => (
                 <tr key={c.id}>
-                  <td className="font-bold text-slate-900 dark:text-white">
+                  <td className="text-slate-900 dark:text-white">
                     {c.contract_number}
                   </td>
                   <td>

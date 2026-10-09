@@ -48,9 +48,10 @@ export default function InspectionManager() {
   const filtered = useMemo(
     () =>
       items.filter((item) => {
-        const matchesSearch = JSON.stringify(item)
-          .toLowerCase()
-          .includes(search.toLowerCase());
+        const code = `KD${String(item.id).padStart(5, "0")}`;
+        const matchesSearch =
+          code.toLowerCase().includes(search.toLowerCase()) ||
+          String(item.id).includes(search.trim());
         const matchesStatus =
           status === "all" || String(item.status).toLowerCase() === status;
         return matchesSearch && matchesStatus;
@@ -114,7 +115,7 @@ export default function InspectionManager() {
     <>
       <TableShell
         title="Kiểm định xe"
-        subtitle="Theo dõi checklist, kết quả và hình ảnh kiểm định"
+        subtitle=""
         search={search}
         setSearch={(value) => {
           setSearch(value);
@@ -152,10 +153,10 @@ export default function InspectionManager() {
                 ))}
               </tr>
             </thead>
-            <tbody className="table-body">
+            <tbody className="table-body font-bold">
               {filtered.slice((page - 1) * 7, page * 7).map((inspection) => (
                 <tr key={inspection.id}>
-                  <td className="font-bold text-slate-900 dark:text-white">
+                  <td className="text-slate-900 dark:text-white">
                     KD{String(inspection.id).padStart(5, "0")}
                   </td>
                   <td>

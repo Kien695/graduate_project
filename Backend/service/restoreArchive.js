@@ -2,6 +2,10 @@ const fs = require("fs");
 const path = require("path");
 const readline = require("readline");
 const { once } = require("events");
+const removeLegacyCategories = fs.readFileSync(
+  path.join(__dirname, "../database/migrations/20260911_remove_legacy_mac_categories.sql"),
+  "utf8",
+);
 
 // Category constraints are obsolete under the four-level MAC policy. Old dumps
 // recreate them before COPY, where their cross-table SQL functions cannot run.
@@ -30,7 +34,7 @@ module.exports = async ({ run, resolveTool, archive, directory, env }) => {
         if (!output.write(line + "\n")) await once(output, "drain");
       }
       // Also covers empty archives and any constraints added in post-data.
-      output.end(removeLegacyChecks);
+      output.end(removeLegacyChecks + "\n" + removeLegacyCategories + "\n");
       await once(output, "finish");
     } finally { lines.close(); input.destroy(); output.destroy(); }
     await run(resolveTool(process.env.PSQL_PATH, "psql"),

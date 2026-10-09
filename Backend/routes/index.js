@@ -4,6 +4,7 @@ const customerRouter = require("./customer.router");
 const vehicleRouter = require("./vehicle.router");
 const accessoryRouter = require("./accessory.router");
 const orderRouter = require("./order.router");
+const accessoryOrderRouter = require("./accessoryOrder.router");
 const contractRouter = require("./contract.router");
 const inspectionRouter = require("./inspection.router");
 const deviceRouter = require("./device.router");
@@ -14,6 +15,7 @@ const backupRouter = require("./backup.router");
 const monitoringRouter = require("./monitoring.router");
 const employeeRouter = require("./employee.router");
 const customerOrderRouter = require("./customerOrder.router");
+const customerAccessoryOrderRouter = require("./customerAccessoryOrder.router");
 const customerContractRouter = require("./customerContract.router");
 const notificationRouter = require("./notification.router");
 module.exports = (app) => {
@@ -23,6 +25,7 @@ module.exports = (app) => {
   app.use("/api/vehicles", vehicleRouter);
   app.use("/api/accessories", accessoryRouter);
   app.use("/api/orders", orderRouter);
+  app.use("/api/accessory-orders", accessoryOrderRouter);
   app.use("/api/contracts", contractRouter);
   app.use("/api/inspections", inspectionRouter);
   app.use("/api/devices", deviceRouter);
@@ -33,6 +36,7 @@ module.exports = (app) => {
   app.use("/api/monitoring", monitoringRouter);
   app.use("/api/employees", employeeRouter);
   app.use("/api/customer/orders", customerOrderRouter);
+  app.use("/api/customer/accessory-orders", customerAccessoryOrderRouter);
   app.use("/api/customer/contracts", customerContractRouter);
   app.use("/api/notifications", notificationRouter);
 };

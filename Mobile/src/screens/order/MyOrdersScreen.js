@@ -1,4 +1,4 @@
-import { useCallback, useState } from "react";
+import { useCallback, useMemo, useState } from "react";
 import {
   ActivityIndicator,
   FlatList,
@@ -10,21 +10,29 @@ import {
 import { useFocusEffect } from "@react-navigation/native";
 import { SafeAreaView } from "react-native-safe-area-context";
 import { getMyOrders } from "../../api/order.api";
+import { getMyAccessoryOrders } from "../../api/accessoryOrder.api";
 import OrderCard from "../../components/order/OrderCard";
+import AccessoryOrderCard from "../../components/accessoryOrder/AccessoryOrderCard";
 import BottomNavigation from "../../components/common/BottomNavigation";
 import { useTheme } from "../../hooks/useTheme";
 
 export default function MyOrdersScreen({ navigation }) {
   const { colors } = useTheme();
   const styles = getStyles(colors);
-  const [orders, setOrders] = useState([]);
+  const [vehicleOrders, setVehicleOrders] = useState([]);
+  const [accessoryOrders, setAccessoryOrders] = useState([]);
   const [loading, setLoading] = useState(true);
   const [refreshing, setRefreshing] = useState(false);
   const [error, setError] = useState("");
   const fetchOrders = useCallback(async () => {
     setError("");
     try {
-      setOrders(await getMyOrders());
+      const [vehicles, accessories] = await Promise.all([
+        getMyOrders(),
+        getMyAccessoryOrders().catch(() => []),
+      ]);
+      setVehicleOrders(vehicles);
+      setAccessoryOrders(accessories);
     } catch (requestError) {
       setError(
         requestError.response?.data?.message || "Không thể tải đơn hàng.",
@@ -42,13 +50,30 @@ export default function MyOrdersScreen({ navigation }) {
     await fetchOrders();
     setRefreshing(false);
   };
+  // Gộp 2 loại đơn (xe + phụ kiện) thành một danh sách duy nhất, sắp xếp
+  // theo ngày đặt mới nhất trước, để khách hàng theo dõi tất cả đơn ở cùng một nơi.
+  const orders = useMemo(() => {
+    const vehicles = vehicleOrders.map((item) => ({
+      ...item,
+      type: "vehicle",
+      sortDate: item.order_date,
+    }));
+    const accessories = accessoryOrders.map((item) => ({
+      ...item,
+      type: "accessory",
+      sortDate: item.created_at,
+    }));
+    return [...vehicles, ...accessories].sort(
+      (a, b) => new Date(b.sortDate) - new Date(a.sortDate),
+    );
+  }, [vehicleOrders, accessoryOrders]);
   return (
     <SafeAreaView style={styles.safe} edges={["top"]}>
       <View style={styles.screen}>
         <View style={styles.header}>
           <Text style={styles.title}>Đơn hàng của tôi</Text>
           <Text style={styles.subtitle}>
-            Theo dõi trạng thái đơn hàng và kiểm định xe
+            Theo dõi trạng thái đơn đặt xe và đơn hàng phụ kiện
           </Text>
         </View>
         {loading ? (
@@ -58,7 +83,7 @@ export default function MyOrdersScreen({ navigation }) {
         ) : (
           <FlatList
             data={orders}
-            keyExtractor={(item) => String(item.id)}
+            keyExtractor={(item) => `${item.type}-${item.id}`}
             contentContainerStyle={styles.list}
             refreshControl={
               <RefreshControl
@@ -73,18 +98,31 @@ export default function MyOrdersScreen({ navigation }) {
                   {error || "Bạn chưa có đơn hàng nào"}
                 </Text>
                 <Text style={styles.emptyText}>
-                  Các xe bạn đặt sẽ hiển thị tại đây.
+                  Các xe và phụ kiện bạn đặt sẽ hiển thị tại đây.
                 </Text>
               </View>
             }
-            renderItem={({ item }) => (
-              <OrderCard
-                order={item}
-                onPress={() =>
-                  navigation.navigate("InspectionStatus", { orderId: item.id })
-                }
-              />
-            )}
+            renderItem={({ item }) =>
+              item.type === "vehicle" ? (
+                <OrderCard
+                  order={item}
+                  onPress={() =>
+                    navigation.navigate("InspectionStatus", {
+                      orderId: item.id,
+                    })
+                  }
+                />
+              ) : (
+                <AccessoryOrderCard
+                  order={item}
+                  onPress={() =>
+                    navigation.navigate("AccessoryOrderDetail", {
+                      orderId: item.id,
+                    })
+                  }
+                />
+              )
+            }
           />
         )}
         <BottomNavigation navigation={navigation} active="orders" />

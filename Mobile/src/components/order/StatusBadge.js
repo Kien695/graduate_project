@@ -4,6 +4,7 @@ import { useTheme } from "../../hooks/useTheme";
 const config = {
   PENDING: { label: "Chờ xác nhận", color: "#B7791F", background: "#FFF8E6" },
   CONFIRMED: { label: "Đã xác nhận", color: "#16805B", background: "#EAF8F2" },
+  SHIPPING: { label: "Đang giao hàng", color: "#2B6CB0", background: "#EBF4FF" },
   CANCELLED: { label: "Đã hủy", color: "#C53030", background: "#FFF0F0" },
   COMPLETED: { label: "Hoàn tất", color: "#2B6CB0", background: "#EBF4FF" },
 };

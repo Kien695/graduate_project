@@ -73,10 +73,11 @@ export default function AccessoryManager() {
     <EntityManager
       slice="accessories"
       title="Phụ kiện"
-      subtitle="Thêm, cập nhật giá bán và quản lý tồn kho"
+      subtitle=""
       columns={columns}
       fields={fields}
       thunks={thunks}
+      searchKeys={["sku", "name"]}
       statusFilter={statusFilter}
       addLabel="Thêm phụ kiện"
       imageUpload={{ label: "Hình ảnh phụ kiện", multiple: true, maxFiles: 10 }}

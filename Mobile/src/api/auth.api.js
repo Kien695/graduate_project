@@ -14,6 +14,13 @@ export const logoutRequest = async (refreshToken) => {
   return res.data;
 };
 
+// Dò lại trạng thái khóa (không cần mật khẩu) — dùng để tự tắt đồng hồ đếm
+// ngược trên màn hình đăng nhập ngay khi admin mở khóa, không cần đợi hết giờ.
+export const checkLockStatus = async (email) => {
+  const res = await client.post('/auth/lock-status', { email });
+  return res.data.data; // { locked, failedAttempts?, maxAttempts?, lockedUntil? }
+};
+
 export const registerCustomer = async (payload) => {
   const res = await client.post('/auth/register/customer', payload);
   return res.data;

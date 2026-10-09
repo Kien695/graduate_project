@@ -15,7 +15,9 @@ import { useFocusEffect } from "@react-navigation/native";
 import { SafeAreaView } from "react-native-safe-area-context";
 import { useDispatch, useSelector } from "react-redux";
 import { getVehicles } from "../../api/vehicle.api";
+import { getAccessories } from "../../api/accessory.api";
 import VehicleCard from "../../components/vehicle/VehicleCard";
+import AccessoryCard from "../../components/accessory/AccessoryCard";
 import SearchBar from "../../components/common/SearchBar";
 import CategoryItem from "../../components/common/CategoryItem";
 import BottomNavigation from "../../components/common/BottomNavigation";
@@ -33,6 +35,7 @@ export default function HomeScreen({ navigation }) {
   const dispatch = useDispatch();
   const unreadCount = useSelector((state) => state.notifications.unreadCount);
   const [vehicles, setVehicles] = useState([]);
+  const [accessories, setAccessories] = useState([]);
   const [search, setSearch] = useState("");
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState("");
@@ -41,9 +44,12 @@ export default function HomeScreen({ navigation }) {
       let active = true;
       setLoading(true);
       setError("");
-      getVehicles()
-        .then((data) => {
-          if (active) setVehicles(data);
+      Promise.all([getVehicles(), getAccessories().catch(() => [])])
+        .then(([vehicleData, accessoryData]) => {
+          if (active) {
+            setVehicles(vehicleData);
+            setAccessories(accessoryData);
+          }
         })
         .catch(() => {
           if (active) setError("Không thể tải danh sách xe.");
@@ -57,20 +63,38 @@ export default function HomeScreen({ navigation }) {
       };
     }, [dispatch]),
   );
-  const featured = useMemo(() => {
+  // vehicles/accessories đến từ API đã sắp xếp mới nhất trước (created_at DESC),
+  // nên top 5 "nổi bật" tạm thời chính là 5 mục mới thêm gần nhất.
+  const featuredVehicles = useMemo(() => vehicles.slice(0, 5), [vehicles]);
+  const featuredAccessories = useMemo(
+    () => accessories.slice(0, 5),
+    [accessories],
+  );
+  const handleSearchSubmit = () => {
     const key = search.trim().toLowerCase();
-    return (
-      key
-        ? vehicles.filter((item) =>
-            `${item.brand} ${item.model}`.toLowerCase().includes(key),
-          )
-        : vehicles
-    ).slice(0, 5);
-  }, [search, vehicles]);
-  const comingSoon = () =>
-    Alert.alert("Sắp ra mắt", "Danh mục này đang được phát triển.");
+    if (!key) return;
+    const vehicleMatch = vehicles.find((item) =>
+      `${item.brand} ${item.model}`.toLowerCase().includes(key),
+    );
+    if (vehicleMatch) {
+      navigation.navigate("VehicleDetail", { vehicleId: vehicleMatch.id });
+      return;
+    }
+    const accessoryMatch = accessories.find((item) =>
+      item.name?.toLowerCase().includes(key),
+    );
+    if (accessoryMatch) {
+      navigation.navigate("AccessoryDetail", {
+        accessoryId: accessoryMatch.id,
+      });
+      return;
+    }
+    Alert.alert("Không tìm thấy", "Không có xe hoặc phụ kiện phù hợp.");
+  };
   const initial = (user?.full_name || "K").trim().charAt(0).toUpperCase();
-  const bannerVehicle = vehicles[0];
+  // Xe có doanh thu cao nhất; chưa có dữ liệu doanh thu thì lấy xe đầu tiên
+  // được thêm vào database (vehicles đã sắp mới nhất trước nên đó là phần tử cuối).
+  const bannerVehicle = vehicles[vehicles.length - 1];
 
   return (
     <SafeAreaView style={styles.safe} edges={["top"]}>
@@ -123,6 +147,7 @@ export default function HomeScreen({ navigation }) {
           <SearchBar
             value={search}
             onChangeText={setSearch}
+            onSubmitEditing={handleSearchSubmit}
             placeholder="Tìm kiếm xe, phụ kiện..."
           />
 
@@ -170,17 +195,7 @@ export default function HomeScreen({ navigation }) {
             <CategoryItem
               icon="construct-outline"
               label="Phụ kiện"
-              onPress={comingSoon}
-            />
-            <CategoryItem
-              icon="gift-outline"
-              label="Ưu đãi"
-              onPress={comingSoon}
-            />
-            <CategoryItem
-              icon="shield-checkmark-outline"
-              label="Dịch vụ"
-              onPress={comingSoon}
+              onPress={() => navigation.navigate("AccessoryList")}
             />
           </View>
           <View style={styles.sectionHeader}>
@@ -195,10 +210,10 @@ export default function HomeScreen({ navigation }) {
             <ActivityIndicator color={colors.primary} style={styles.loader} />
           ) : error ? (
             <Text style={styles.error}>{error}</Text>
-          ) : featured.length ? (
+          ) : featuredVehicles.length ? (
             <FlatList
               horizontal
-              data={featured}
+              data={featuredVehicles}
               keyExtractor={(item) => String(item.id)}
               showsHorizontalScrollIndicator={false}
               renderItem={({ item }) => (
@@ -213,6 +228,38 @@ export default function HomeScreen({ navigation }) {
             />
           ) : (
             <Text style={styles.empty}>Không tìm thấy xe phù hợp.</Text>
+          )}
+
+          <View style={styles.sectionHeader}>
+            <Text style={styles.sectionTitle}>Phụ kiện nổi bật</Text>
+            <TouchableOpacity
+              onPress={() => navigation.navigate("AccessoryList")}
+            >
+              <Text style={styles.seeAll}>Xem tất cả</Text>
+            </TouchableOpacity>
+          </View>
+          {loading ? (
+            <ActivityIndicator color={colors.primary} style={styles.loader} />
+          ) : featuredAccessories.length ? (
+            <FlatList
+              horizontal
+              data={featuredAccessories}
+              keyExtractor={(item) => String(item.id)}
+              showsHorizontalScrollIndicator={false}
+              renderItem={({ item }) => (
+                <AccessoryCard
+                  variant="featured"
+                  accessory={item}
+                  onPress={() =>
+                    navigation.navigate("AccessoryDetail", {
+                      accessoryId: item.id,
+                    })
+                  }
+                />
+              )}
+            />
+          ) : (
+            <Text style={styles.empty}>Không tìm thấy phụ kiện phù hợp.</Text>
           )}
         </ScrollView>
         <BottomNavigation navigation={navigation} active="home" />

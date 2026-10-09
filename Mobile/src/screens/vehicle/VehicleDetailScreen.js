@@ -97,7 +97,9 @@ export default function VehicleDetailScreen({ route, navigation }) {
           <View style={styles.titleRow}>
             <View style={styles.titleContent}>
               <Text style={styles.name}>
-                {vehicle.brand} {vehicle.model}
+                {vehicle.brand}
+                {"\n"}
+                {vehicle.model}
               </Text>
               <Text style={styles.price}>{formatVND(vehicle.price)}</Text>
             </View>

@@ -334,19 +334,15 @@ CREATE TABLE payments (
 -- =========================
 
 
+-- =========================
+-- 10. VEHICLE INSPECTION
+-- =========================
 CREATE TABLE inspections (
-
     id SERIAL PRIMARY KEY,
-
-
     vehicle_id INT,
-
-
+    order_id INT,           -- Cột được thêm vào để sửa lỗi
     contract_id INT,
-
-
     inspector_id INT,
-
     status VARCHAR(20) DEFAULT 'pending'
     CHECK(status IN
     (
@@ -355,10 +351,7 @@ CREATE TABLE inspections (
         'passed',
         'failed'
     )),
-
     checklist JSONB DEFAULT '[]'::jsonb,
-
-
     result VARCHAR(20)
     CHECK(result IN
     (
@@ -366,29 +359,13 @@ CREATE TABLE inspections (
         'FAIL',
         'WAITING'
     )),
-
-
     note TEXT,
-
-
     inspection_date TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
 
-
-    FOREIGN KEY(vehicle_id)
-    REFERENCES vehicles(id),
-
-
-    FOREIGN KEY(order_id)
-    REFERENCES orders(id),
-
-
-    FOREIGN KEY(contract_id)
-    REFERENCES contracts(id),
-
-
-    FOREIGN KEY(inspector_id)
-    REFERENCES users(id)
-
+    FOREIGN KEY(vehicle_id) REFERENCES vehicles(id),
+    FOREIGN KEY(order_id) REFERENCES orders(id),
+    FOREIGN KEY(contract_id) REFERENCES contracts(id),
+    FOREIGN KEY(inspector_id) REFERENCES users(id)
 );
 
 

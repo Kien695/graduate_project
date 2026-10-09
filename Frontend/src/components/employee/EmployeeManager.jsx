@@ -1,20 +1,13 @@
 import { useEffect, useMemo, useState } from "react";
 import { useNavigate } from "react-router-dom";
 import { toast } from "react-toastify";
-import {
-  deleteData,
-  getData,
-  patchData,
-  postData,
-  putData,
-} from "../../utils/api";
+import { getData, patchData, postData, putData } from "../../utils/api";
 import TableShell from "../common/TableShell";
 import Pagination from "../common/Pagination";
 import LoadingState from "../common/LoadingState";
 import Modal from "../common/Modal";
 import StatusBadge from "../common/StatusBadge";
 import StatusFilter from "../common/StatusFilter";
-import { Icon } from "../common/Icons";
 
 const statusOptions = [
   { value: "active", label: "Đang làm việc" },
@@ -75,12 +68,7 @@ export default function EmployeeManager() {
   const filtered = useMemo(
     () =>
       items.filter((x) => {
-        const matchesSearch = [
-          x.employee_code,
-          x.full_name,
-          x.email,
-          x.department,
-        ].some((v) =>
+        const matchesSearch = [x.employee_code, x.full_name].some((v) =>
           String(v || "")
             .toLowerCase()
             .includes(search.toLowerCase()),
@@ -132,23 +120,31 @@ export default function EmployeeManager() {
       setSubmitting(false);
     }
   };
-  const deactivate = async (item) => {
-    if (!window.confirm(`Vô hiệu hóa tài khoản của ${item.full_name}?`)) return;
+  const toggleLock = async (item) => {
+    const locking = item.is_active;
+    const label = locking ? "khóa" : "mở khóa";
+    if (!window.confirm(`Xác nhận ${label} tài khoản của ${item.full_name}?`))
+      return;
     try {
-      await deleteData(`/employees/${item.id}`);
-      toast.success("Đã vô hiệu hóa tài khoản");
+      await postData(`/employees/${item.id}/${locking ? "lock" : "unlock"}`);
+      toast.success(locking ? "Đã khóa tài khoản" : "Đã mở khóa tài khoản");
       await load();
     } catch (e) {
       toast.error(
-        e.response?.data?.message || "Không thể vô hiệu hóa tài khoản",
+        e.response?.data?.message || `Không thể ${label} tài khoản`,
       );
     }
+  };
+  const handleAction = (item, action) => {
+    if (action === "view") navigate(`/admin/employees/${item.id}`);
+    else if (action === "edit") open(item);
+    else if (action === "lock" || action === "unlock") toggleLock(item);
   };
   return (
     <>
       <TableShell
         title="Quản lý nhân viên"
-        subtitle="Tài khoản nhân viên và nhãn bảo mật MAC"
+        subtitle=""
         search={search}
         setSearch={(v) => {
           setSearch(v);
@@ -187,13 +183,13 @@ export default function EmployeeManager() {
                 ))}
               </tr>
             </thead>
-            <tbody className="table-body">
+            <tbody className="table-body font-bold">
               {filtered.slice((page - 1) * 7, page * 7).map((x) => (
                 <tr key={x.id}>
-                  <td className="font-bold text-slate-900 dark:text-white">
+                  <td className="text-slate-900 dark:text-white">
                     {x.employee_code}
                   </td>
-                  <td className="font-semibold">{x.full_name}</td>
+                  <td>{x.full_name}</td>
                   <td>
                     <div>{x.email}</div>
                     <div className="text-xs text-slate-400">
@@ -211,30 +207,25 @@ export default function EmployeeManager() {
                     <StatusBadge value={x.is_active ? "active" : "inactive"} />
                   </td>
                   <td>
-                    <div className="flex gap-1">
-                      <button
-                        onClick={() => navigate(`/admin/employees/${x.id}`)}
-                        className="action-green"
-                        title="Chi tiết"
-                      >
-                        <Icon name="eye" className="h-4 w-4" />
-                      </button>
-                      <button
-                        onClick={() => open(x)}
-                        className="action-blue"
-                        title="Sửa"
-                      >
-                        <Icon name="edit" className="h-4 w-4" />
-                      </button>
-                      <button
-                        disabled={!x.is_active}
-                        onClick={() => deactivate(x)}
-                        className="action-red"
-                        title="Vô hiệu hóa"
-                      >
-                        <Icon name="trash" className="h-4 w-4" />
-                      </button>
-                    </div>
+                    <select
+                      value=""
+                      onChange={(e) => {
+                        handleAction(x, e.target.value);
+                        e.target.value = "";
+                      }}
+                      className="form-control py-1.5 text-xs font-bold"
+                    >
+                      <option value="" disabled>
+                        Chọn thao tác
+                      </option>
+                      <option value="view">Xem chi tiết</option>
+                      <option value="edit">Sửa</option>
+                      {x.is_active ? (
+                        <option value="lock">Khóa tài khoản</option>
+                      ) : (
+                        <option value="unlock">Mở khóa tài khoản</option>
+                      )}
+                    </select>
                   </td>
                 </tr>
               ))}
@@ -258,9 +249,13 @@ export default function EmployeeManager() {
       <Modal
         open={modal}
         onClose={() => setModal(false)}
-        title={editing ? "Cập nhật nhân viên" : "Thêm nhân viên và tài khoản"}
+        title={editing ? "Cập nhật nhân viên" : "Thêm nhân viên"}
       >
-        <form onSubmit={submit} className="grid gap-4 sm:grid-cols-2">
+        <form
+          onSubmit={submit}
+          className="grid gap-4 sm:grid-cols-2"
+          autoComplete="off"
+        >
           {[
             ["employeeCode", "Mã nhân viên", "text"],
             ["fullName", "Họ tên", "text"],
@@ -278,6 +273,7 @@ export default function EmployeeManager() {
                 className="form-control"
                 name={name}
                 type={type}
+                autoComplete="off"
                 required={["employeeCode", "fullName", "email"].includes(name)}
                 value={form[name]}
                 onChange={change}
@@ -293,6 +289,7 @@ export default function EmployeeManager() {
                 className="form-control"
                 name="password"
                 type="password"
+                autoComplete="new-password"
                 minLength="8"
                 required
                 value={form.password}

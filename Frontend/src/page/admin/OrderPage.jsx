@@ -5,7 +5,6 @@ export default function OrderPage() {
     <>
       <PageHeader
         title="Quản lý đơn hàng"
-        description="Xác nhận, hủy và hoàn tất đơn đặt xe"
       />
       <OrderManager />
     </>

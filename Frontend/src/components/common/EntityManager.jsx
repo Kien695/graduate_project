@@ -59,6 +59,7 @@ export default function EntityManager({
   addLabel,
   imageUpload,
   statusFilter,
+  searchKeys,
 }) {
   const dispatch = useDispatch();
   const { items, loading, submitting, error } = useSelector(
@@ -95,8 +96,9 @@ export default function EntityManager({
   const filtered = useMemo(
     () =>
       items.filter((item) => {
-        const matchesSearch = columns.some((column) =>
-          String(item[column.key] ?? "")
+        const keys = searchKeys || columns.map((column) => column.key);
+        const matchesSearch = keys.some((key) =>
+          String(item[key] ?? "")
             .toLowerCase()
             .includes(search.toLowerCase()),
         );
@@ -108,7 +110,7 @@ export default function EntityManager({
           ).toLowerCase() === status;
         return matchesSearch && matchesStatus;
       }),
-    [items, columns, search, status, statusFilter],
+    [items, columns, search, status, statusFilter, searchKeys],
   );
   const shown = filtered.slice((page - 1) * pageSize, page * pageSize);
 
@@ -219,7 +221,7 @@ export default function EntityManager({
           <LoadingState />
         ) : (
           <table className="w-full min-w-[760px] text-left text-sm">
-            <thead className="bg-slate-50 text-[11px] uppercase tracking-wider text-slate-500 dark:bg-slate-900 dark:text-slate-400">
+            <thead className="bg-slate-50 text-[11px] font-bold uppercase tracking-wider text-slate-500 dark:bg-slate-900 dark:text-slate-400">
               <tr>
                 <th className="px-5 py-4">STT</th>
                 {columns.map((column) => (
@@ -230,7 +232,7 @@ export default function EntityManager({
                 <th className="px-5 py-4 text-right">Thao tác</th>
               </tr>
             </thead>
-            <tbody className="divide-y divide-slate-100 dark:divide-slate-700">
+            <tbody className="divide-y divide-slate-100 font-bold dark:divide-slate-700">
               {shown.map((item, index) => (
                 <tr
                   key={item.id}
@@ -242,7 +244,7 @@ export default function EntityManager({
                   {columns.map((column) => (
                     <td
                       key={column.key}
-                      className={`px-4 py-4 ${column.primary ? "font-bold text-slate-900 dark:text-white" : "text-slate-600 dark:text-slate-300"}`}
+                      className={`px-4 py-4 ${column.primary ? "text-slate-900 dark:text-white" : "text-slate-600 dark:text-slate-300"}`}
                     >
                       {renderCell(item, column)}
                     </td>

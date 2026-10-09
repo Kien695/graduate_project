@@ -150,6 +150,11 @@ const start = (id, user, ipAddress) =>
       "UPDATE inspections SET status='checking',updated_at=NOW() WHERE id=$1 RETURNING *",
       [id],
     );
+    await client.query(
+      "UPDATE vehicles SET status='inspection',updated_at=NOW() WHERE id=$1 AND LOWER(status)<>'sold'",
+      [old.rows[0].vehicle_id],
+    );
+
     await audit.record(client, {
       userId: user.id,
       action: "CHECKING",
@@ -225,6 +230,13 @@ const setStatus = (id, status, user, ipAddress) =>
      SET status=$2,result=$3,inspected_at=NOW(),inspection_date=NOW(),updated_at=NOW()
      WHERE id=$1 RETURNING *`,
       [id, status, result],
+    );
+    await client.query(
+      "UPDATE vehicles SET status=$2,updated_at=NOW() WHERE id=$1 AND LOWER(status)<>'sold'",
+      [
+        old.rows[0].vehicle_id,
+        status === "passed" ? "reserved" : "maintenance",
+      ],
     );
     await audit.record(client, {
       userId: user.id,

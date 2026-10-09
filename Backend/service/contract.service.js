@@ -207,9 +207,17 @@ const addPayment = (id, input, user, ipAddress) =>
         user.id,
       ],
     );
+    const insp = await client.query(
+      `SELECT status FROM inspections
+       WHERE contract_id=$1 ORDER BY created_at DESC LIMIT 1`,
+      [id],
+    );
+    const inspected = insp.rows[0]?.status?.toLowerCase() === "passed";
+
     if (
+      inspected &&
       Number(paid.rows[0].total) + Number(input.amount) ===
-      Number(contract.rows[0].total_amount)
+        Number(contract.rows[0].total_amount)
     )
       await client.query(
         "UPDATE contracts SET status='completed',updated_at=NOW() WHERE id=$1",

@@ -5,7 +5,6 @@ export default function DashboardPage() {
     <>
       <PageHeader
         title="Trang chủ"
-        description="Tổng quan hoạt động kinh doanh hôm nay"
       />
       <DashboardOverview />
     </>

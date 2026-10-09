@@ -1,0 +1,12 @@
+const express = require("express");
+const c = require("../controller/accessoryOrder.controller");
+const { auth, authorize } = require("../middleware/auth.middleware");
+const r = express.Router();
+r.use(auth);
+r.get("/", authorize("admin", "manager", "staff"), c.list);
+r.get("/:id", c.get);
+r.post("/:id/confirm", authorize("admin", "manager", "staff"), c.confirm);
+r.post("/:id/ship", authorize("admin", "manager", "staff"), c.ship);
+r.post("/:id/cancel", c.cancel);
+r.post("/:id/complete", authorize("admin", "manager", "staff"), c.complete);
+module.exports = r;

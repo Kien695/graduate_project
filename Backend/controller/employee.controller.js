@@ -35,12 +35,20 @@ const update = catchAsyncError(async (req, res) =>
     await employeeService.update(req.params.id, req.body, actor(req)),
   ),
 );
-const remove = catchAsyncError(async (req, res) =>
+const lock = catchAsyncError(async (req, res) =>
   successResponse(
     res,
     200,
-    "Đã vô hiệu hóa tài khoản nhân viên",
+    "Đã khóa tài khoản nhân viên",
     await employeeService.deactivate(req.params.id, actor(req)),
+  ),
+);
+const unlock = catchAsyncError(async (req, res) =>
+  successResponse(
+    res,
+    200,
+    "Đã mở khóa tài khoản nhân viên",
+    await employeeService.activate(req.params.id, actor(req)),
   ),
 );
 const updateSecurityLevel = catchAsyncError(async (req, res) =>
@@ -56,4 +64,4 @@ const updateSecurityLevel = catchAsyncError(async (req, res) =>
   ),
 );
 
-module.exports = { list, get, create, update, remove, updateSecurityLevel };
+module.exports = { list, get, create, update, lock, unlock, updateSecurityLevel };

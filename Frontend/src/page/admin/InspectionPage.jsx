@@ -5,7 +5,6 @@ export default function InspectionPage() {
     <>
       <PageHeader
         title="Kiểm định xe"
-        description="Quản lý phiếu và hình ảnh kiểm định"
       />
       <InspectionManager />
     </>

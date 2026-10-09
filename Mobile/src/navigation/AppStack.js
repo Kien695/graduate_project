@@ -2,6 +2,9 @@ import { createNativeStackNavigator } from "@react-navigation/native-stack";
 import HomeScreen from "../screens/home/HomeScreen";
 import VehicleListScreen from "../screens/vehicle/VehicleListScreen";
 import VehicleDetailScreen from "../screens/vehicle/VehicleDetailScreen";
+import AccessoryListScreen from "../screens/accessory/AccessoryListScreen";
+import AccessoryDetailScreen from "../screens/accessory/AccessoryDetailScreen";
+import AccessoryOrderDetailScreen from "../screens/accessoryOrder/AccessoryOrderDetailScreen";
 import OrderConfirmScreen from "../screens/order/OrderConfirmScreen";
 import MyOrdersScreen from "../screens/order/MyOrdersScreen";
 import ContractListScreen from "../screens/contract/ContractListScreen";
@@ -37,6 +40,21 @@ export default function AppStack() {
       <Stack.Screen
         name="VehicleDetail"
         component={VehicleDetailScreen}
+        options={{ headerShown: false }}
+      />
+      <Stack.Screen
+        name="AccessoryList"
+        component={AccessoryListScreen}
+        options={{ headerShown: false }}
+      />
+      <Stack.Screen
+        name="AccessoryDetail"
+        component={AccessoryDetailScreen}
+        options={{ headerShown: false }}
+      />
+      <Stack.Screen
+        name="AccessoryOrderDetail"
+        component={AccessoryOrderDetailScreen}
         options={{ headerShown: false }}
       />
       <Stack.Screen

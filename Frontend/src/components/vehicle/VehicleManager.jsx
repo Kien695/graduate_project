@@ -62,11 +62,12 @@ export default function VehicleManager() {
     <EntityManager
       slice="vehicles"
       title="Danh sách xe trong kho"
-      subtitle="Quản lý thông tin và trạng thái toàn bộ xe"
+      subtitle=""
       addLabel="Thêm xe"
       thunks={thunks}
       columns={columns}
       fields={fields}
+      searchKeys={["vin", "brand", "model"]}
       statusFilter={statusFilter}
       imageUpload={{ label: "Hình ảnh xe", multiple: true, maxFiles: 10 }}
     />

@@ -5,7 +5,6 @@ export default function AccessoryPage() {
     <>
       <PageHeader
         title="Quản lý phụ kiện"
-        description="Danh mục phụ kiện và số lượng tồn kho"
       />
       <AccessoryManager />
     </>

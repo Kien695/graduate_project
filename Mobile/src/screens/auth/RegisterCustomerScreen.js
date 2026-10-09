@@ -13,7 +13,7 @@ import {
 import { registerCustomer } from "../../api/auth.api";
 import AuthField from "../../components/auth/AuthField";
 import { authStyles } from "../../components/auth/authStyles";
-import background from "../../../assets/xe-dep.webp";
+import background from "../../../assets/xe-sieu.jpg";
 
 const initialForm = {
   name: "",
@@ -30,15 +30,16 @@ const validate = (form) => {
   else if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(form.email.trim()))
     errors.email = "Email không đúng định dạng";
   if (!form.phone.trim()) errors.phone = "Vui lòng nhập số điện thoại";
-  else if (!/^(0\d{9}|\+84\d{9})$/.test(form.phone.trim()))
-    errors.phone = "Số điện thoại không hợp lệ";
+  else if (!/^(03|05|07|08|09)\d{8}$/.test(form.phone.trim()))
+    errors.phone =
+      "Số điện thoại phải có 10 số, bắt đầu bằng 03, 05, 07, 08 hoặc 09";
   if (!form.password) errors.password = "Vui lòng nhập mật khẩu";
   else if (form.password.length < 6)
     errors.password = "Mật khẩu phải có ít nhất 6 ký tự";
   if (!form.confirmPassword)
     errors.confirmPassword = "Vui lòng nhập lại mật khẩu";
   else if (form.password !== form.confirmPassword)
-    errors.confirmPassword = "Mật khẩu nhập lại không khớp";
+    errors.confirmPassword = "Mật khẩu không khớp";
   return errors;
 };
 
@@ -107,15 +108,12 @@ export default function RegisterCustomerScreen({ navigation }) {
           >
             <View style={authStyles.card}>
               <Text style={authStyles.screenTitle}>Đăng ký tài khoản</Text>
-              <Text style={authStyles.screenHint}>
-                Tạo tài khoản khách hàng để đặt xe và theo dõi đơn hàng.
-              </Text>
 
               <AuthField
                 label="Họ và tên"
                 value={form.name}
                 onChangeText={(value) => updateField("name", value)}
-                placeholder="Nguyễn Văn A"
+                placeholder="Nhập họ tên của bạn"
                 autoCapitalize="words"
                 error={errors.name}
               />
@@ -133,7 +131,7 @@ export default function RegisterCustomerScreen({ navigation }) {
                 label="Số điện thoại"
                 value={form.phone}
                 onChangeText={(value) => updateField("phone", value)}
-                placeholder="0123456789"
+                placeholder=""
                 keyboardType="phone-pad"
                 error={errors.phone}
               />

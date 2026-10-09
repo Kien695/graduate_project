@@ -1,8 +1,9 @@
 class ErrorHandler extends Error {
-  constructor(message, statusCode = 500, details = []) {
+  constructor(message, statusCode = 500, details = [], extra = {}) {
     super(message);
     this.statusCode = statusCode;
     this.details = details;
+    this.extra = extra;
   }
 }
 const ErrorMiddleware = (err, req, res, next) => {
@@ -28,6 +29,11 @@ const ErrorMiddleware = (err, req, res, next) => {
     console.error(err);
   return res
     .status(statusCode)
-    .json({ success: false, message, errors: err.details || [] });
+    .json({
+      success: false,
+      message,
+      errors: err.details || [],
+      ...(err.extra || {}),
+    });
 };
 module.exports = { ErrorHandler, ErrorMiddleware };
