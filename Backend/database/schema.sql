@@ -87,7 +87,7 @@ ALTER TABLE accessories ADD COLUMN IF NOT EXISTS is_active BOOLEAN DEFAULT TRUE;
 ALTER TABLE accessories ADD COLUMN IF NOT EXISTS images JSONB DEFAULT '[]'::jsonb;
 ALTER TABLE accessories ADD COLUMN IF NOT EXISTS created_at TIMESTAMPTZ DEFAULT NOW();
 ALTER TABLE accessories ADD COLUMN IF NOT EXISTS updated_at TIMESTAMPTZ DEFAULT NOW();
-UPDATE accessories SET stock=COALESCE(quantity,stock,0);
+UPDATE accessories SET stock=COALESCE(stock,quantity,0);
 CREATE UNIQUE INDEX IF NOT EXISTS accessories_sku_unique ON accessories(sku) WHERE sku IS NOT NULL;
 
 CREATE TABLE IF NOT EXISTS orders (id SERIAL PRIMARY KEY,customer_id INTEGER REFERENCES customers(id),vehicle_id INTEGER REFERENCES vehicles(id),order_date TIMESTAMP DEFAULT NOW(),status VARCHAR(30));
