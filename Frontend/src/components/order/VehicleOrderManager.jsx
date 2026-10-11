@@ -98,7 +98,7 @@ export default function VehicleOrderManager() {
           <tbody className="table-body font-bold">
             {filtered.slice((page - 1) * 7, page * 7).map((o) => (
               <tr key={o.id}>
-                <td className="text-slate-900">
+                <td className="text-slate-900 dark:text-white">
                   DH{String(o.id).padStart(5, "0")}
                 </td>
                 <td>{o.customer_name || `KH #${o.customer_id}`}</td>

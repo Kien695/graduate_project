@@ -1,5 +1,5 @@
 import { useState } from "react";
-import { NavLink, Outlet, useNavigate } from "react-router-dom";
+import { Link, NavLink, Outlet, useNavigate } from "react-router-dom";
 import { useDispatch, useSelector } from "react-redux";
 import { logoutUser } from "../redux/slices/authSlice";
 import { Icon } from "../components/common/Icons";
@@ -57,9 +57,13 @@ export default function AdminLayout() {
   return (
     <div className="min-h-screen bg-slate-50 text-slate-700 dark:bg-slate-950 dark:text-slate-300">
       <aside
-        className={`fixed inset-y-0 left-0 z-40 flex w-64 flex-col bg-[#07192d] text-slate-300 shadow-2xl transition-transform lg:translate-x-0 ${open ? "translate-x-0" : "-translate-x-full"}`}
+        className={`fixed inset-y-0 left-0 z-40 flex w-64 flex-col border-r border-slate-200 bg-white text-slate-600 transition-transform dark:border-white/10 dark:bg-[#07192d] dark:text-slate-300 lg:translate-x-0 ${open ? "translate-x-0" : "-translate-x-full"}`}
       >
-        <div className="flex h-20 items-center gap-3 border-b border-white/10 px-6">
+        <Link
+          to="/admin/dashboard"
+          onClick={() => setOpen(false)}
+          className="flex h-20 items-center gap-3 border-b border-slate-200 px-6 dark:border-white/10"
+        >
           <div className="grid h-10 w-10 place-items-center overflow-hidden rounded-xl bg-blue-600 text-white">
             <img
               src={logo}
@@ -68,14 +72,14 @@ export default function AdminLayout() {
             />
           </div>
           <div>
-            <div className="text-sm font-black tracking-wider text-white">
+            <div className="text-sm font-black tracking-wider text-slate-900 dark:text-white">
               AUTO CAR
             </div>
-            <div className="text-[10px] uppercase tracking-[.22em] text-blue-300">
+            <div className="text-[10px] uppercase tracking-[.22em] text-blue-700 dark:text-blue-300">
               Management
             </div>
           </div>
-        </div>
+        </Link>
         <nav className="flex-1 space-y-1 p-4">
           {visibleNav.map((item) => (
             <NavLink
@@ -83,7 +87,7 @@ export default function AdminLayout() {
               to={item.to}
               onClick={() => setOpen(false)}
               className={({ isActive }) =>
-                `flex items-center gap-3 rounded-xl px-4 py-3 text-sm font-semibold transition ${isActive ? "bg-blue-600 text-white shadow-lg shadow-blue-950/30" : "hover:bg-white/5 hover:text-white"}`
+                `flex items-center gap-3 rounded-xl px-4 py-3 text-sm font-semibold transition ${isActive ? "bg-blue-600 text-white shadow-lg shadow-blue-950/30" : "hover:bg-slate-100 hover:text-slate-900 dark:hover:bg-white/5 dark:hover:text-white"}`
               }
             >
               <Icon name={item.icon} className="h-5 w-5" />
@@ -93,7 +97,7 @@ export default function AdminLayout() {
         </nav>
         <button
           onClick={logout}
-          className="m-4 flex items-center gap-3 rounded-xl border border-white/10 bg-rose-600 px-4 py-3 text-sm font-semibold text-white hover:bg-rose-700"
+          className="m-4 flex items-center gap-3 rounded-xl border border-slate-200 bg-rose-600 px-4 py-3 text-sm font-semibold text-white hover:bg-rose-700 dark:border-white/10"
         >
           <Icon name="logout" />
           Đăng xuất

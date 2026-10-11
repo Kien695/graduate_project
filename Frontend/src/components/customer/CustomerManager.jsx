@@ -105,7 +105,7 @@ export default function CustomerManager() {
           <tbody className="table-body font-bold">
             {items.map((c) => (
               <tr key={c.id}>
-                <td className="text-slate-900">
+                <td className="text-slate-900 dark:text-white">
                   KH{String(c.id).padStart(5, "0")}
                 </td>
                 <td>{c.full_name}</td>
