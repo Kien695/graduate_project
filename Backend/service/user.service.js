@@ -1,4 +1,7 @@
-const { database, withTransaction } = require("../database/database");
+const {
+  systemDatabase,
+  withSystemTransaction,
+} = require("../database/database");
 const { ErrorHandler } = require("../middleware/errorMiddleware");
 const {
   encryptProfileValue,
@@ -8,7 +11,9 @@ const {
 const uploader = require("./upload.service");
 const storageQuota = require("./storageQuota.service");
 
-const getById = async (id, executor = database) => {
+// Profile/account operations are system operations, not business CRUD. They
+// must not depend on a staff role having direct privileges on users/employees.
+const getById = async (id, executor = systemDatabase) => {
   const { rows } = await executor.query(
     `SELECT u.id,u.email,u.email_encrypted,u.full_name,u.phone,u.phone_encrypted,
        u.avatar_url,u.avatar_public_id,u.role,u.security_level_id,u.is_locked,u.is_active,u.last_login_at,
@@ -30,7 +35,7 @@ const getById = async (id, executor = database) => {
 };
 
 const updateMe = (id, input) =>
-  withTransaction(async (client) => {
+  withSystemTransaction(async (client) => {
     const current = await client.query(
       "SELECT role FROM users WHERE id=$1 FOR UPDATE",
       [id],
@@ -115,7 +120,7 @@ const updateMe = (id, input) =>
   });
 
 const setSecurityLevel = (id, securityLevelId, actor, ipAddress) =>
-  withTransaction(async (client) => {
+  withSystemTransaction(async (client) => {
     const levelId = Number(securityLevelId);
     if (!Number.isInteger(levelId) || levelId <= 0)
       throw new ErrorHandler("Nhan bao mat khong hop le", 400);
@@ -139,7 +144,7 @@ const updateAvatar = async (user, file) => {
   let uploaded;
   try {
     uploaded = await uploader.uploadBuffer(file, "auto-dealer/avatars");
-    const previous = await withTransaction(async (client) => {
+    const previous = await withSystemTransaction(async (client) => {
       const current = await client.query(
         "SELECT avatar_url,avatar_public_id,avatar_size_bytes FROM users WHERE id=$1 FOR UPDATE",
         [user.id],
@@ -157,7 +162,7 @@ const updateAvatar = async (user, file) => {
       if (previous.avatar_public_id)
         await uploader.destroyImage(previous.avatar_public_id);
     } catch (cleanupError) {
-      await database.query(
+      await systemDatabase.query(
         `UPDATE users SET avatar_url=$2,avatar_public_id=$3,avatar_size_bytes=$4,updated_at=NOW()
          WHERE id=$1 AND avatar_public_id=$5`,
         [
@@ -183,7 +188,7 @@ const updateAvatar = async (user, file) => {
   } catch (error) {
     if (!uploaded) await storageQuota.releaseReservation(reservation);
     else {
-      const saved = await database.query(
+      const saved = await systemDatabase.query(
         "SELECT 1 FROM users WHERE id=$1 AND avatar_public_id=$2",
         [user.id, uploaded.public_id],
       );

@@ -24,7 +24,7 @@ r.put(
 );
 r.delete(
   "/:id",
-  authorize("admin", "manager"),
+  authorize("admin", "manager", "staff"),
   enforceContractAccess,
   c.remove,
 );

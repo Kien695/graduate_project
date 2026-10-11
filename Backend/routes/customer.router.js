@@ -97,5 +97,5 @@ r.get(
 );
 r.get("/:id", authorize("admin", "manager", "staff"), c.get);
 r.put("/:id", authorize("admin", "manager", "staff"), c.update);
-r.delete("/:id", authorize("admin", "manager"), c.remove);
+r.delete("/:id", authorize("admin", "manager", "staff"), c.remove);
 module.exports = r;

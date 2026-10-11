@@ -9,13 +9,13 @@ import { hasRole } from "../utils/adminAccess";
 import logo from "../assets/logoxe.jpg";
 
 const nav = [
-  { to: "/admin/dashboard", icon: "dashboard", label: "Trang chủ" },
-  { to: "/admin/vehicles", icon: "car", label: "Xe" },
-  { to: "/admin/accessories", icon: "box", label: "Phụ kiện" },
-  { to: "/admin/orders", icon: "orders", label: "Đơn đặt hàng" },
-  { to: "/admin/contracts", icon: "contract", label: "Hợp đồng" },
-  { to: "/admin/inspections", icon: "inspect", label: "Kiểm định xe" },
-  { to: "/admin/customers", icon: "users", label: "Khách hàng" },
+  { to: "/admin/dashboard", icon: "dashboard", label: "Trang chủ", feature: "dashboard" },
+  { to: "/admin/vehicles", icon: "car", label: "Xe", feature: "vehicles" },
+  { to: "/admin/accessories", icon: "box", label: "Phụ kiện", feature: "accessories" },
+  { to: "/admin/orders", icon: "orders", label: "Đơn đặt hàng", feature: ["orders", "accessoryOrders"] },
+  { to: "/admin/contracts", icon: "contract", label: "Hợp đồng", feature: "contracts" },
+  { to: "/admin/inspections", icon: "inspect", label: "Kiểm định xe", feature: "inspections" },
+  { to: "/admin/customers", icon: "users", label: "Khách hàng", feature: "customers" },
   {
     to: "/admin/employees",
     icon: "users",
@@ -35,10 +35,19 @@ const nav = [
 export default function AdminLayout() {
   const [open, setOpen] = useState(false);
   const user = useSelector((state) => state.auth.user);
+  const permissions = useSelector(
+    (state) => state.auth.navigationPermissions,
+  );
   const dispatch = useDispatch();
   const navigate = useNavigate();
   const visibleNav = nav.filter(
-    (item) => !item.roles || hasRole(user, item.roles),
+    (item) =>
+      (!item.roles || hasRole(user, item.roles)) &&
+      (!item.feature ||
+        permissions?.unrestricted ||
+        (Array.isArray(item.feature) ? item.feature : [item.feature]).some(
+          (feature) => permissions?.[feature] === true,
+        )),
   );
   const logout = async () => {
     await dispatch(logoutUser());

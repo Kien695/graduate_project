@@ -2,6 +2,8 @@ const jwt = require("jsonwebtoken");
 const { ErrorHandler } = require("./errorMiddleware");
 const { catchAsyncError } = require("./catchAsyncError");
 const sessionActivity = require("../service/sessionActivity.service");
+const databaseSessions = require("../service/databaseSession.service");
+const { runWithDatabase } = require("../database/database");
 
 const auth = catchAsyncError(async (req, res, next) => {
   const token = req.headers.authorization?.startsWith("Bearer ")
@@ -27,12 +29,21 @@ const auth = catchAsyncError(async (req, res, next) => {
     sessionId: decoded.sessionId,
     userId: decoded.userId,
   });
-  if (!user)
+  if (!user) {
+    await databaseSessions.close(decoded.sessionId);
     return next(new ErrorHandler("Phien dang nhap khong con hieu luc", 401));
+  }
   if (!user.is_active || user.is_locked)
     return next(new ErrorHandler("Tai khoan khong kha dung", 401));
   req.user = user;
   req.user.role = req.user.role?.toLowerCase();
+  if (req.user.role === "staff") {
+    const pool = databaseSessions.get(decoded.sessionId);
+    if (!pool)
+      return next(new ErrorHandler("Phiên cơ sở dữ liệu đã mất, vui lòng đăng nhập lại", 401));
+    databaseSessions.touch(decoded.sessionId);
+    return runWithDatabase(pool, next);
+  }
   next();
 });
 const authorize =

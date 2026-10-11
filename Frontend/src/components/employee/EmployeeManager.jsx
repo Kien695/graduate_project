@@ -1,7 +1,7 @@
 import { useEffect, useMemo, useState } from "react";
 import { useNavigate } from "react-router-dom";
 import { toast } from "react-toastify";
-import { getData, patchData, postData, putData } from "../../utils/api";
+import { deleteData, getData, patchData, postData, putData } from "../../utils/api";
 import TableShell from "../common/TableShell";
 import Pagination from "../common/Pagination";
 import LoadingState from "../common/LoadingState";
@@ -36,6 +36,12 @@ export default function EmployeeManager() {
     [modal, setModal] = useState(false),
     [editing, setEditing] = useState(null),
     [form, setForm] = useState(emptyForm);
+  const [permissionModal, setPermissionModal] = useState(false),
+    [permissionEmployee, setPermissionEmployee] = useState(null),
+    [permissionFeatures, setPermissionFeatures] = useState([]),
+    [permissionLoading, setPermissionLoading] = useState(false);
+  const [deleteEmployee, setDeleteEmployee] = useState(null),
+    [deleting, setDeleting] = useState(false);
   const load = async () => {
     setLoading(true);
     try {
@@ -91,6 +97,7 @@ export default function EmployeeManager() {
             position: item.position || "",
             department: item.department || "",
             securityLevelId: item.security_level_id || "",
+            password: "",
           }
         : emptyForm,
     );
@@ -135,10 +142,65 @@ export default function EmployeeManager() {
       );
     }
   };
+  const openPermissions = async (item) => {
+    setPermissionEmployee(item);
+    setPermissionFeatures([]);
+    setPermissionModal(true);
+    setPermissionLoading(true);
+    try {
+      const response = await getData(`/employees/${item.id}/database-permissions`);
+      setPermissionFeatures(response.data?.features || []);
+    } catch (e) {
+      setPermissionModal(false);
+      toast.error(e.response?.data?.message || "Không thể tải quyền PostgreSQL");
+    } finally {
+      setPermissionLoading(false);
+    }
+  };
+  const togglePermission = (featureKey, privilege) =>
+    setPermissionFeatures((features) => features.map((feature) =>
+      feature.key === featureKey
+        ? { ...feature, permissions: { ...feature.permissions, [privilege]: !feature.permissions[privilege] } }
+        : feature));
+  const savePermissions = async () => {
+    setPermissionLoading(true);
+    try {
+      const features = Object.fromEntries(permissionFeatures.map((feature) => [feature.key, feature.permissions]));
+      const response = await putData(`/employees/${permissionEmployee.id}/database-permissions`, { features });
+      setPermissionFeatures(response.data?.features || []);
+      toast.success("Đã cập nhật quyền PostgreSQL");
+      setPermissionModal(false);
+    } catch (e) {
+      toast.error(e.response?.data?.message || "Không thể cập nhật quyền PostgreSQL");
+    } finally {
+      setPermissionLoading(false);
+    }
+  };
   const handleAction = (item, action) => {
     if (action === "view") navigate(`/admin/employees/${item.id}`);
     else if (action === "edit") open(item);
+    else if (action === "permissions") openPermissions(item);
     else if (action === "lock" || action === "unlock") toggleLock(item);
+    else if (action === "delete") setDeleteEmployee(item);
+  };
+  const permanentlyDelete = async () => {
+    if (!deleteEmployee || deleting) return;
+    setDeleting(true);
+    try {
+      await deleteData(`/employees/${deleteEmployee.id}/permanent`);
+      toast.success("Đã xóa vĩnh viễn nhân viên");
+      setDeleteEmployee(null);
+      await load();
+    } catch (e) {
+      const details = e.response?.data?.errors
+        ?.map((item) => item.message)
+        .filter(Boolean)
+        .join("; ");
+      const message = e.response?.data?.message || "Không thể xóa vĩnh viễn nhân viên";
+      toast.error(details ? `${message}: ${details}` : message);
+    } finally {
+      setDeleting(false);
+    }
   };
   return (
     <>
@@ -220,11 +282,13 @@ export default function EmployeeManager() {
                       </option>
                       <option value="view">Xem chi tiết</option>
                       <option value="edit">Sửa</option>
+                      <option value="permissions">Cấp quyền</option>
                       {x.is_active ? (
                         <option value="lock">Khóa tài khoản</option>
                       ) : (
                         <option value="unlock">Mở khóa tài khoản</option>
                       )}
+                      <option value="delete">Xóa vĩnh viễn</option>
                     </select>
                   </td>
                 </tr>
@@ -280,10 +344,10 @@ export default function EmployeeManager() {
               />
             </label>
           ))}
-          {!editing && (
+          {(
             <label>
               <span className="mb-1.5 block text-xs font-bold text-slate-600 dark:text-slate-300">
-                Mật khẩu ban đầu *
+                {editing ? "Mật khẩu mới (để trống nếu không đổi)" : "Mật khẩu ban đầu *"}
               </span>
               <input
                 className="form-control"
@@ -291,7 +355,7 @@ export default function EmployeeManager() {
                 type="password"
                 autoComplete="new-password"
                 minLength="8"
-                required
+                required={!editing}
                 value={form.password}
                 onChange={change}
               />
@@ -332,6 +396,62 @@ export default function EmployeeManager() {
             </button>
           </div>
         </form>
+      </Modal>
+      <Modal
+        open={Boolean(deleteEmployee)}
+        onClose={() => !deleting && setDeleteEmployee(null)}
+        title="Xác nhận xóa vĩnh viễn"
+      >
+        <div className="space-y-5">
+          <div className="rounded-xl border border-rose-200 bg-rose-50 p-4 text-sm text-rose-800 dark:border-rose-900 dark:bg-rose-950/40 dark:text-rose-200">
+            <p className="font-bold">Thao tác này không thể hoàn tác.</p>
+            <p className="mt-2">
+              Nhân viên sẽ bị xóa: <strong>{deleteEmployee?.full_name}</strong>
+              {deleteEmployee?.employee_code ? ` (${deleteEmployee.employee_code})` : ""}.
+            </p>
+            <p className="mt-1">Tài khoản ứng dụng, phiên đăng nhập và role PostgreSQL liên quan cũng sẽ bị xóa nếu an toàn.</p>
+          </div>
+          <div className="flex justify-end gap-3">
+            <button type="button" disabled={deleting} onClick={() => setDeleteEmployee(null)} className="rounded-xl border border-slate-200 px-5 py-2.5 text-sm font-semibold disabled:opacity-60 dark:border-slate-700">
+              Hủy
+            </button>
+            <button type="button" disabled={deleting} onClick={permanentlyDelete} className="rounded-xl bg-rose-600 px-5 py-2.5 text-sm font-bold text-white disabled:cursor-not-allowed disabled:opacity-60">
+              {deleting ? "Đang xóa..." : "Xóa vĩnh viễn"}
+            </button>
+          </div>
+        </div>
+      </Modal>
+      <Modal
+        open={permissionModal}
+        onClose={() => setPermissionModal(false)}
+        title={`Cấp quyền: ${permissionEmployee?.full_name || ""}`}
+      >
+        {permissionLoading && !permissionFeatures.length ? <LoadingState /> : (
+          <div className="space-y-4">
+            <div className="overflow-x-auto rounded-xl border border-slate-200 dark:border-slate-700">
+              <table className="w-full text-sm">
+                <thead className="table-head"><tr><th>Tính năng</th><th>Xem</th><th>Thêm</th><th>Sửa</th><th>Xóa</th></tr></thead>
+                <tbody className="table-body">
+                  {permissionFeatures.map((feature) => (
+                    <tr key={feature.key}>
+                      <td className="font-bold">{feature.label}</td>
+                      {["SELECT", "INSERT", "UPDATE", "DELETE"].map((privilege) => (
+                        <td key={privilege} className="text-center">
+                          {feature.operations.includes(privilege) && <input type="checkbox" checked={Boolean(feature.permissions[privilege])} onChange={() => togglePermission(feature.key, privilege)} title={feature.external?.[privilege] ? "Quyền còn đến từ nguồn khác" : ""} />}
+                        </td>
+                      ))}
+                    </tr>
+                  ))}
+                </tbody>
+              </table>
+            </div>
+            <p className="text-xs text-slate-500">Quyền hiệu lực được đọc trực tiếp từ PostgreSQL. Hệ thống sẽ báo lỗi nếu quyền không thể thu hồi do PUBLIC, role kế thừa hoặc quyền sở hữu.</p>
+            <div className="flex justify-end gap-3">
+              <button type="button" onClick={() => setPermissionModal(false)} className="rounded-xl border px-5 py-2.5">Hủy</button>
+              <button type="button" disabled={permissionLoading} onClick={savePermissions} className="rounded-xl bg-blue-600 px-5 py-2.5 font-bold text-white disabled:opacity-60">{permissionLoading ? "Đang lưu..." : "Lưu quyền"}</button>
+            </div>
+          </div>
+        )}
       </Modal>
     </>
   );
