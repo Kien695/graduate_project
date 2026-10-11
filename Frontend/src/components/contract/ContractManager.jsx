@@ -34,6 +34,12 @@ const money = (n) =>
     currency: "VND",
     maximumFractionDigits: 0,
   }).format(Number(n) || 0);
+const remainingAmount = (contract) =>
+  Math.max(
+    0,
+    Number(contract?.total_amount || contract?.order_total_amount || 0) -
+      Number(contract?.paid_amount || 0),
+  );
 const emptyContract = {
   order_id: "",
   contract_number: "",
@@ -166,6 +172,10 @@ export default function ContractManager() {
   };
   const submitPay = async (e) => {
     e.preventDefault();
+    if (!paying || remainingAmount(paying) <= 0) {
+      setPaying(null);
+      return;
+    }
     try {
       await dispatch(
         payContract({
@@ -292,7 +302,9 @@ export default function ContractManager() {
                           Ký
                         </button>
                       )}
-                      {["approved", "signed"].includes(c.status) && (
+                      {c.status === "signed" &&
+                        c.inspection_status === "passed" &&
+                        remainingAmount(c) > 0 && (
                         <button
                           onClick={() => {
                             setPaying(c);
@@ -418,22 +430,14 @@ export default function ContractManager() {
           <div className="rounded-xl bg-slate-50 p-4 text-sm dark:bg-slate-900">
             <div className="flex justify-between">
               <span>Còn phải thanh toán</span>
-              <b>
-                {money(
-                  Number(paying?.total_amount || paying?.order_total_amount) -
-                    Number(paying?.paid_amount),
-                )}
-              </b>
+              <b>{money(remainingAmount(paying))}</b>
             </div>
           </div>
           <Field
             label="Số tiền"
             type="number"
             min="1"
-            max={
-              Number(paying?.total_amount || paying?.order_total_amount) -
-              Number(paying?.paid_amount)
-            }
+            max={remainingAmount(paying)}
             value={payment.amount}
             set={(v) => setPayment({ ...payment, amount: v })}
           />

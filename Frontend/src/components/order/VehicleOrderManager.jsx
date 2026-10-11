@@ -135,11 +135,16 @@ export default function VehicleOrderManager() {
                     )}
                     {o.status === "confirmed" && (
                       <button
-                        disabled={o.inspection_status !== "passed"}
+                        disabled={
+                          o.inspection_status !== "passed" ||
+                          o.contract_status !== "completed"
+                        }
                         title={
                           o.inspection_status !== "passed"
                             ? "Cần kiểm định đạt (PASS) mới được hoàn tất"
-                            : ""
+                            : o.contract_status !== "completed"
+                              ? "Cần thanh toán đủ hợp đồng mới được hoàn tất"
+                              : ""
                         }
                         onClick={() =>
                           act(completeOrder, o.id, "Đã hoàn tất đơn")

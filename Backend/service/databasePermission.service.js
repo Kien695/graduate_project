@@ -14,7 +14,13 @@ const FEATURES = Object.freeze({
     label: "Đơn đặt hàng",
     tables: ["orders"],
     // order.service.list joins vehicles/customers and reads the latest inspection.
-    readTables: ["customers", "vehicles", "inspections"],
+    readTables: [
+      "customers",
+      "vehicles",
+      "inspections",
+      "contracts",
+      "payments",
+    ],
     operations: PRIVILEGES,
   },
   contracts: {
@@ -22,7 +28,26 @@ const FEATURES = Object.freeze({
     tables: ["contracts", "payments"],
     // Contract list/detail resolves its order, customer, vehicle, MAC label and
     // payment creator. These remain read-only supporting tables.
-    readTables: ["orders", "customers", "vehicles", "security_levels", "users"],
+    readTables: [
+      "orders",
+      "customers",
+      "vehicles",
+      "security_levels",
+      "users",
+      "audit_logs",
+      "inspections",
+    ],
+    supportPrivileges: {
+      INSERT: [{ table: "audit_logs", privilege: "INSERT" }],
+      UPDATE: [
+        { table: "audit_logs", privilege: "INSERT" },
+        { table: "notifications", privilege: "INSERT" },
+      ],
+      DELETE: [
+        { table: "audit_logs", privilege: "INSERT" },
+        { table: "notifications", privilege: "INSERT" },
+      ],
+    },
     operations: PRIVILEGES,
   },
   inspections: { label: "Kiểm định xe", tables: ["inspections", "inspection_images"], readTables: ["vehicles", "orders", "contracts"], operations: PRIVILEGES },
@@ -46,7 +71,17 @@ const getEmployee = async (employeeId, client = systemDatabase) => {
   return rows[0];
 };
 const existingFeatures = async (client) => {
-  const names = [...new Set(Object.values(FEATURES).flatMap((f) => [...f.tables, ...(f.readTables || [])]))];
+  const names = [
+    ...new Set(
+      Object.values(FEATURES).flatMap((f) => [
+        ...f.tables,
+        ...(f.readTables || []),
+        ...Object.values(f.supportPrivileges || {})
+          .flat()
+          .map((entry) => entry.table),
+      ]),
+    ),
+  ];
   const { rows } = await client.query(
     "SELECT table_name FROM information_schema.tables WHERE table_schema='public' AND table_name=ANY($1::text[])",
     [names],
@@ -132,9 +167,18 @@ const update = async (employeeId, requested = {}) => withSystemTransaction(async
       if (feature.operations.includes("INSERT")) insertTables.add(table);
     }
     for (const table of feature.readTables || []) managedTables.add(table);
-    for (const privilege of feature.operations)
-      if (selection[privilege] === true)
+    for (const entries of Object.values(feature.supportPrivileges || {}))
+      for (const entry of entries) {
+        managedTables.add(entry.table);
+        if (entry.privilege === "INSERT") insertTables.add(entry.table);
+      }
+    for (const privilege of feature.operations) {
+      if (selection[privilege] === true) {
         for (const table of feature.tables) want(table, privilege);
+        for (const entry of feature.supportPrivileges?.[privilege] || [])
+          want(entry.table, entry.privilege);
+      }
+    }
     if (feature.operations.some((privilege) => selection[privilege] === true))
       for (const table of feature.readTables || []) want(table, "SELECT");
   }

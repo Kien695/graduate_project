@@ -246,7 +246,7 @@ export default function InspectionManager() {
               {contracts
                 .filter(
                   (contract) =>
-                    String(contract.status).toLowerCase() !== "cancelled",
+                    String(contract.status).toLowerCase() === "signed",
                 )
                 .map((contract) => (
                   <option key={contract.id} value={contract.id}>

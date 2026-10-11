@@ -44,7 +44,7 @@ r.post(
 r.get("/:id/audit-logs", enforceContractAccess, c.logs);
 r.patch(
   "/:id/security-level",
-  authorize("admin"),
+  authorize("admin", "manager", "staff"),
   enforceContractAccess,
   enforceContractSecurityChange,
   c.security,

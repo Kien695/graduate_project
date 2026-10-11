@@ -12,7 +12,9 @@ const list = async (user) => {
   const { rows } = await database.query(
     `SELECT c.*,o.customer_id,o.vehicle_id,o.total_amount order_total_amount,
     cu.full_name customer_name,v.brand vehicle_brand,v.model vehicle_model,v.vin,
-    sl.name security_level_name,COALESCE(SUM(p.amount),0) paid_amount
+    sl.name security_level_name,COALESCE(SUM(p.amount),0) paid_amount,
+    (SELECT LOWER(i.status) FROM inspections i WHERE i.contract_id=c.id
+      ORDER BY i.created_at DESC LIMIT 1) inspection_status
     FROM contracts c JOIN orders o ON o.id=c.order_id LEFT JOIN payments p ON p.contract_id=c.id
     LEFT JOIN customers cu ON cu.id=o.customer_id LEFT JOIN vehicles v ON v.id=o.vehicle_id
     LEFT JOIN security_levels sl ON sl.id=c.security_level_id ${access}
@@ -28,7 +30,9 @@ const get = async (id) => {
     cu.full_name customer_name,cu.email customer_email,cu.phone customer_phone,
     cu.email_encrypted customer_email_encrypted,cu.phone_encrypted customer_phone_encrypted,
     v.brand vehicle_brand,v.model vehicle_model,v.vin,sl.name security_level_name,sl.rank security_level_rank,
-    COALESCE(SUM(p.amount),0) paid_amount
+    COALESCE(SUM(p.amount),0) paid_amount,
+    (SELECT LOWER(i.status) FROM inspections i WHERE i.contract_id=c.id
+      ORDER BY i.created_at DESC LIMIT 1) inspection_status
     FROM contracts c JOIN orders o ON o.id=c.order_id LEFT JOIN payments p ON p.contract_id=c.id
     LEFT JOIN customers cu ON cu.id=o.customer_id LEFT JOIN vehicles v ON v.id=o.vehicle_id
     LEFT JOIN security_levels sl ON sl.id=c.security_level_id
@@ -184,9 +188,9 @@ const addPayment = (id, input, user, ipAddress) =>
     );
     if (
       !contract.rows[0] ||
-      !["approved", "signed", "completed"].includes(contract.rows[0].status)
+      String(contract.rows[0].status).toLowerCase() !== "signed"
     )
-      throw new ErrorHandler("Hợp đồng chưa đủ điều kiện thanh toán", 409);
+      throw new ErrorHandler("Hợp đồng phải được ký trước khi thanh toán", 409);
     const paid = await client.query(
       "SELECT COALESCE(SUM(amount),0) total FROM payments WHERE contract_id=$1",
       [id],
@@ -213,9 +217,13 @@ const addPayment = (id, input, user, ipAddress) =>
       [id],
     );
     const inspected = insp.rows[0]?.status?.toLowerCase() === "passed";
+    if (!inspected)
+      throw new ErrorHandler(
+        "Xe phải kiểm định đạt trước khi thanh toán",
+        409,
+      );
 
     if (
-      inspected &&
       Number(paid.rows[0].total) + Number(input.amount) ===
         Number(contract.rows[0].total_amount)
     )

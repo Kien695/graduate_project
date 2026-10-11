@@ -85,14 +85,14 @@ const create = (input, user) =>
      JOIN orders o ON o.id=c.order_id
      JOIN vehicles v ON v.id=o.vehicle_id
      WHERE c.id=$1 AND o.id=$2 AND v.id=$3
-       AND LOWER(o.status) IN ('confirmed','completed')
-       AND LOWER(c.status)<>'cancelled'
+       AND LOWER(o.status)='confirmed'
+       AND LOWER(c.status)='signed'
      FOR SHARE OF c,o,v`,
       [input.contract_id, input.order_id, input.vehicle_id],
     );
     if (!relation.rows[0])
       throw new ErrorHandler(
-        "Contract, order va vehicle khong cung mot giao dich hop le",
+        "Hợp đồng phải được ký trước khi tạo phiếu kiểm định",
         409,
       );
     const { rows } = await client.query(

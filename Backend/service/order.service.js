@@ -6,7 +6,9 @@ const list = async (user) => {
   const { rows } = await database.query(
     `SELECT o.*,v.brand,v.model,c.full_name customer_name,
       (SELECT LOWER(i.status) FROM inspections i WHERE i.order_id=o.id
-        ORDER BY i.created_at DESC LIMIT 1) inspection_status
+        ORDER BY i.created_at DESC LIMIT 1) inspection_status,
+      (SELECT LOWER(ct.status) FROM contracts ct WHERE ct.order_id=o.id
+        ORDER BY ct.created_at DESC LIMIT 1) contract_status
      FROM orders o JOIN vehicles v ON v.id=o.vehicle_id JOIN customers c ON c.id=o.customer_id
  ${own ? "JOIN users u ON u.id=c.user_id WHERE u.id=$1" : ""} ORDER BY o.created_at DESC`,
     own ? [user.id] : [],
@@ -91,6 +93,23 @@ const transition = (id, status, user) =>
       if (String(insp.rows[0].status).toLowerCase() !== "passed")
         throw new ErrorHandler(
           "Xe chưa kiểm định đạt (PASS), không thể giao xe",
+          409,
+        );
+      const settlement = await c.query(
+        `SELECT ct.status,ct.total_amount,COALESCE(SUM(p.amount),0) paid_amount
+         FROM contracts ct LEFT JOIN payments p ON p.contract_id=ct.id
+         WHERE ct.order_id=$1
+         GROUP BY ct.id`,
+        [id],
+      );
+      if (
+        !settlement.rows[0] ||
+        String(settlement.rows[0].status).toLowerCase() !== "completed" ||
+        Number(settlement.rows[0].paid_amount) !==
+          Number(settlement.rows[0].total_amount)
+      )
+        throw new ErrorHandler(
+          "Hợp đồng chưa thanh toán đủ, không thể hoàn tất đơn hàng",
           409,
         );
     }
