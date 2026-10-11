@@ -23,9 +23,11 @@ ALTER TABLE users ADD COLUMN IF NOT EXISTS updated_at TIMESTAMPTZ DEFAULT NOW();
 ALTER TABLE users ADD COLUMN IF NOT EXISTS email_encrypted TEXT;
 ALTER TABLE users ADD COLUMN IF NOT EXISTS phone_encrypted TEXT;
 ALTER TABLE users ADD COLUMN IF NOT EXISTS email_lookup_hash CHAR(64);
+ALTER TABLE users ADD COLUMN IF NOT EXISTS db_user VARCHAR(63);
 UPDATE users SET full_name=COALESCE(full_name,username,email),failed_login_attempts=COALESCE(failed_login_count,failed_login_attempts,0),is_active=UPPER(COALESCE(status,'ACTIVE')) NOT IN ('INACTIVE','DISABLED'),is_locked=COALESCE(is_locked,FALSE) OR locked_until>NOW();
 CREATE UNIQUE INDEX IF NOT EXISTS users_email_unique_ci ON users(LOWER(email)) WHERE email IS NOT NULL;
 CREATE UNIQUE INDEX IF NOT EXISTS users_email_lookup_hash_unique ON users(email_lookup_hash) WHERE email_lookup_hash IS NOT NULL;
+CREATE UNIQUE INDEX IF NOT EXISTS users_db_user_unique_ci ON users(LOWER(db_user)) WHERE db_user IS NOT NULL;
 
 CREATE TABLE IF NOT EXISTS employees (
   id SERIAL PRIMARY KEY,
@@ -195,3 +197,58 @@ ALTER TABLE orders DROP CONSTRAINT IF EXISTS orders_status_check;
 ALTER TABLE orders ADD CONSTRAINT orders_status_check CHECK (UPPER(status) IN ('PENDING','CONFIRMED','CANCELLED','COMPLETED'));
 ALTER TABLE contracts DROP CONSTRAINT IF EXISTS contracts_status_check;
 ALTER TABLE contracts ADD CONSTRAINT contracts_status_check CHECK (UPPER(status) IN ('CREATED','DRAFT','APPROVED','SIGNED','CANCELLED','COMPLETED'));
+
+-- A deliberately narrow projection for Dashboard. Granting SELECT on this
+-- view does not grant direct SELECT on the underlying business tables.
+CREATE OR REPLACE VIEW dashboard_overview AS
+WITH subject AS (
+  SELECT sl.rank FROM users u
+  JOIN security_levels sl ON sl.id=u.security_level_id
+  WHERE u.db_user=current_user
+), payment_totals AS (
+  SELECT contract_id,COALESCE(SUM(amount),0) AS paid_amount
+  FROM payments GROUP BY contract_id
+), visible_contracts AS (
+  SELECT c.* FROM contracts c
+  LEFT JOIN security_levels object_level ON object_level.id=c.security_level_id
+  WHERE NOT EXISTS (SELECT 1 FROM subject)
+     OR COALESCE(object_level.rank,0) <= (SELECT rank FROM subject LIMIT 1)
+)
+SELECT
+  (SELECT COUNT(*)::int FROM vehicles) AS vehicle_count,
+  (SELECT COUNT(*)::int FROM orders) AS order_count,
+  (SELECT COUNT(*)::int FROM visible_contracts) AS contract_count,
+  (SELECT COALESCE(SUM(p.amount),0) FROM payments p JOIN visible_contracts c ON c.id=p.contract_id) AS revenue,
+  COALESCE((
+    SELECT jsonb_object_agg(status,total) FROM (
+      SELECT LOWER(status) status,COUNT(*)::int total FROM orders GROUP BY LOWER(status)
+    ) s
+  ),'{}'::jsonb) AS order_status,
+  COALESCE((
+    SELECT jsonb_agg(x ORDER BY x.created_at DESC) FROM (
+      SELECT o.id,o.customer_id,o.vehicle_id,o.status,o.created_at,
+             c.full_name customer_name,v.brand,v.model
+      FROM orders o
+      LEFT JOIN customers c ON c.id=o.customer_id
+      LEFT JOIN vehicles v ON v.id=o.vehicle_id
+      ORDER BY o.created_at DESC LIMIT 5
+    ) x
+  ),'[]'::jsonb) AS recent_orders,
+  COALESCE((
+    SELECT jsonb_agg(x ORDER BY x.created_at DESC) FROM (
+      SELECT c.id,c.contract_number,c.order_id,c.status,c.created_at,
+             COALESCE(pt.paid_amount,0) AS paid_amount
+      FROM visible_contracts c
+      LEFT JOIN payment_totals pt ON pt.contract_id=c.id
+      ORDER BY c.created_at DESC LIMIT 5
+    ) x
+  ),'[]'::jsonb) AS recent_contracts,
+  COALESCE((
+    SELECT jsonb_agg(x ORDER BY x.period_start) FROM (
+      SELECT date_trunc('month',c.created_at) AS period_start,
+             COALESCE(SUM(p.amount),0) amount
+      FROM visible_contracts c LEFT JOIN payments p ON p.contract_id=c.id
+      GROUP BY date_trunc('month',c.created_at)
+      ORDER BY period_start DESC LIMIT 6
+    ) x
+  ),'[]'::jsonb) AS revenue_chart;

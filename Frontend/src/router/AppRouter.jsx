@@ -17,6 +17,9 @@ import BackupPage from "../page/admin/BackupPage";
 const AdminOnly = ({ children }) => (
   <ProtectedRouter allowedRoles={["ADMIN"]}>{children}</ProtectedRouter>
 );
+const FeatureOnly = ({ feature, children }) => (
+  <ProtectedRouter requiredFeature={feature}>{children}</ProtectedRouter>
+);
 export default function AppRouter() {
   return useRoutes([
     { path: "/", element: <Navigate to="/admin/dashboard" replace /> },
@@ -62,14 +65,14 @@ export default function AppRouter() {
       ),
       children: [
         { index: true, element: <Navigate to="dashboard" replace /> },
-        { path: "dashboard", element: <DashboardPage /> },
+        { path: "dashboard", element: <FeatureOnly feature="dashboard"><DashboardPage /></FeatureOnly> },
         { path: "backups", element: <AdminOnly><BackupPage /></AdminOnly> },
-        { path: "vehicles", element: <VehiclePage /> },
-        { path: "accessories", element: <AccessoryPage /> },
-        { path: "orders", element: <OrderPage /> },
-        { path: "contracts", element: <ContractPage /> },
-        { path: "inspections", element: <InspectionPage /> },
-        { path: "customers", element: <CustomerPage /> },
+        { path: "vehicles", element: <FeatureOnly feature="vehicles"><VehiclePage /></FeatureOnly> },
+        { path: "accessories", element: <FeatureOnly feature="accessories"><AccessoryPage /></FeatureOnly> },
+        { path: "orders", element: <FeatureOnly feature={["orders", "accessoryOrders"]}><OrderPage /></FeatureOnly> },
+        { path: "contracts", element: <FeatureOnly feature="contracts"><ContractPage /></FeatureOnly> },
+        { path: "inspections", element: <FeatureOnly feature="inspections"><InspectionPage /></FeatureOnly> },
+        { path: "customers", element: <FeatureOnly feature="customers"><CustomerPage /></FeatureOnly> },
         {
           path: "employees",
           element: (

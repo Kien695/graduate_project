@@ -5,6 +5,7 @@ const { upload, validateImageContent } = require('../middleware/upload.middlewar
 const router = express.Router();
 router.use(auth);
 router.get("/me", controller.getMe);
+router.get("/me/database-permissions", controller.getMyDatabasePermissions);
 router.put("/me", controller.updateMe);
 router.put("/me/avatar", upload.single("avatar"), validateImageContent, controller.updateAvatar);
 router.patch("/:id/security-level", authorize("admin"), controller.updateSecurityLevel);

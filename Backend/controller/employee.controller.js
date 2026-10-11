@@ -63,5 +63,13 @@ const updateSecurityLevel = catchAsyncError(async (req, res) =>
     ),
   ),
 );
+const permanentlyDelete = catchAsyncError(async (req, res) =>
+  successResponse(
+    res,
+    200,
+    "Đã xóa vĩnh viễn nhân viên và tài khoản liên quan",
+    await employeeService.permanentlyDelete(req.params.id, actor(req)),
+  ),
+);
 
-module.exports = { list, get, create, update, lock, unlock, updateSecurityLevel };
+module.exports = { list, get, create, update, lock, unlock, updateSecurityLevel, permanentlyDelete };

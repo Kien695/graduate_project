@@ -3,6 +3,7 @@ const authService = require("../service/auth.service");
 const { catchAsyncError } = require("../middleware/catchAsyncError");
 const { ErrorHandler } = require("../middleware/errorMiddleware");
 const { successResponse } = require("../utils/response");
+const databasePermissionService = require("../service/databasePermission.service");
 const getMe = catchAsyncError(async (req, res) =>
   successResponse(
     res,
@@ -45,4 +46,21 @@ const lock = catchAsyncError(async (req, res) =>
     await authService.setLock(req.params.id, true),
   ),
 );
-module.exports = { getMe, updateMe, updateAvatar, updateSecurityLevel, lock };
+const getMyDatabasePermissions = catchAsyncError(async (req, res) => {
+  const role = String(req.user.role || "").toLowerCase();
+  if (role !== "staff")
+    return successResponse(res, 200, "Lấy quyền điều hướng thành công", {
+      unrestricted: true,
+    });
+  const result = await databasePermissionService.readForUser(req.user.id);
+  return successResponse(res, 200, "Lấy quyền điều hướng thành công", {
+    unrestricted: false,
+    features: Object.fromEntries(
+      result.features.map((feature) => [
+        feature.key,
+        Boolean(feature.permissions.SELECT),
+      ]),
+    ),
+  });
+});
+module.exports = { getMe, getMyDatabasePermissions, updateMe, updateAvatar, updateSecurityLevel, lock };

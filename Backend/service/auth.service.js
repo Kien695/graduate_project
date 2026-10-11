@@ -1,12 +1,14 @@
 const jwt = require("jsonwebtoken");
 const crypto = require("crypto");
-const { database, withTransaction } = require("../database/database");
+const { database, systemDatabase, withTransaction, withSystemTransaction } = require("../database/database");
 const { ErrorHandler } = require("../middleware/errorMiddleware");
 const { verifyPassword, hashPassword } = require("../utils/password");
 const { hashToken } = require("../utils/token");
 const { generateAccessToken } = require("../utils/generatAccessToken");
 const { generateRefreshToken } = require("../utils/generateRefreshToken");
 const sessionActivity = require("./sessionActivity.service");
+const databaseSessions = require("./databaseSession.service");
+const { quoteIdentifier } = require("./databasePermission.service");
 const {
   encryptProfileValue,
   decryptProfileValue,
@@ -114,8 +116,12 @@ const getLockStatus = async (email) => {
     : { locked: false };
 };
 
-const login = (input) =>
-  withTransaction(async (client) => {
+const login = async (input) => {
+  let pendingPool;
+  let revokedSessionIds = [];
+  let createdSessionId;
+  try {
+    const data = await withSystemTransaction(async (client) => {
     const result = await client.query(
       `SELECT * FROM users
        WHERE email_lookup_hash=$1 OR LOWER(email)=LOWER($2)
@@ -174,6 +180,15 @@ const login = (input) =>
       );
       loginError.commitTransaction = true;
       throw loginError;
+    }
+    if (user.role === "staff") {
+      if (!user.db_user)
+        throw new ErrorHandler("Tài khoản chưa được liên kết role PostgreSQL; liên hệ quản trị viên để đặt lại mật khẩu", 409);
+      try {
+        pendingPool = await databaseSessions.createVerifiedPool(user.db_user, input.password);
+      } catch (_) {
+        throw new ErrorHandler("Không thể xác thực tài khoản PostgreSQL", 401);
+      }
     }
     if (user.role === "customer") {
       const profileResult = await client.query(
@@ -235,18 +250,20 @@ const login = (input) =>
     );
     const deviceType = normalizeDeviceType(input.deviceType, input.userAgent);
     if (user.role === "customer") {
-      await client.query(
+      const revoked = await client.query(
         `UPDATE user_sessions SET revoked_at=NOW()
          WHERE user_id=$1 AND device_type=$2
-           AND revoked_at IS NULL AND expires_at>NOW()`,
+           AND revoked_at IS NULL AND expires_at>NOW() RETURNING id`,
         [user.id, deviceType],
       );
+      revokedSessionIds = revoked.rows.map((x) => x.id);
     } else {
-      await client.query(
+      const revoked = await client.query(
         `UPDATE user_sessions SET revoked_at=NOW()
-         WHERE user_id=$1 AND revoked_at IS NULL AND expires_at>NOW()`,
+         WHERE user_id=$1 AND revoked_at IS NULL AND expires_at>NOW() RETURNING id`,
         [user.id],
       );
+      revokedSessionIds = revoked.rows.map((x) => x.id);
     }
     const session = await client.query(
       `INSERT INTO user_sessions(
@@ -271,10 +288,27 @@ const login = (input) =>
     delete user.email_lookup_hash;
     return {
       user,
+      sessionId: session.rows[0].id,
       accessToken: generateAccessToken(user, session.rows[0].id),
       refreshToken,
     };
-  });
+    });
+    createdSessionId = data.sessionId;
+    await databaseSessions.closeUserSessions(revokedSessionIds);
+    if (pendingPool) await databaseSessions.register(data.sessionId, pendingPool);
+    delete data.sessionId;
+    delete data.user.db_user;
+    return data;
+  } catch (error) {
+    if (pendingPool) await pendingPool.end().catch(() => undefined);
+    if (createdSessionId)
+      await systemDatabase.query(
+        "UPDATE user_sessions SET revoked_at=NOW() WHERE id=$1",
+        [createdSessionId],
+      ).catch(() => undefined);
+    throw error;
+  }
+};
 const refresh = async (token) => {
   let payload;
   try {
@@ -289,24 +323,30 @@ const refresh = async (token) => {
   });
   if (!user || user.is_locked || !user.is_active)
     throw new ErrorHandler("Phiên đăng nhập không còn hiệu lực", 401);
+  if (String(user.role).toLowerCase() === "staff" && !databaseSessions.get(payload.sessionId))
+    throw new ErrorHandler("Phiên cơ sở dữ liệu đã mất, vui lòng đăng nhập lại", 401);
   return { accessToken: generateAccessToken(user, payload.sessionId) };
 };
 const logout = async (token) => {
-  if (token)
-    await database.query(
-      "UPDATE user_sessions SET revoked_at=NOW() WHERE refresh_token_hash=$1 AND revoked_at IS NULL",
+  if (token) {
+    const { rows } = await systemDatabase.query(
+      "UPDATE user_sessions SET revoked_at=NOW() WHERE refresh_token_hash=$1 AND revoked_at IS NULL RETURNING id",
       [hashToken(token)],
     );
+    await databaseSessions.closeUserSessions(rows.map((x) => x.id));
+  }
 };
-const logoutAll = async (userId) =>
-  database.query(
-    "UPDATE user_sessions SET revoked_at=NOW() WHERE user_id=$1 AND revoked_at IS NULL",
+const logoutAll = async (userId) => {
+  const { rows } = await systemDatabase.query(
+    "UPDATE user_sessions SET revoked_at=NOW() WHERE user_id=$1 AND revoked_at IS NULL RETURNING id",
     [userId],
   );
+  await databaseSessions.closeUserSessions(rows.map((x) => x.id));
+};
 const changePassword = (userId, currentPassword, newPassword) =>
-  withTransaction(async (client) => {
+  withSystemTransaction(async (client) => {
     const { rows } = await client.query(
-      "SELECT password_hash FROM users WHERE id=$1 FOR UPDATE",
+      "SELECT password_hash,db_user,role FROM users WHERE id=$1 FOR UPDATE",
       [userId],
     );
     if (
@@ -316,14 +356,20 @@ const changePassword = (userId, currentPassword, newPassword) =>
       throw new ErrorHandler("Mật khẩu hiện tại không đúng", 400);
     if (await verifyPassword(newPassword, rows[0].password_hash))
       throw new ErrorHandler("Mật khẩu mới phải khác mật khẩu hiện tại", 400);
+    if (String(rows[0].role).toLowerCase() === "staff") {
+      if (!rows[0].db_user)
+        throw new ErrorHandler("Nhân viên cũ cần quản trị viên liên kết role PostgreSQL trước", 409);
+      await client.query(`ALTER ROLE ${quoteIdentifier(rows[0].db_user)} PASSWORD ${client.escapeLiteral(newPassword)}`);
+    }
     await client.query(
       "UPDATE users SET password_hash=$2,password_changed_at=NOW(),updated_at=NOW() WHERE id=$1",
       [userId, await hashPassword(newPassword)],
     );
-    await client.query(
-      "UPDATE user_sessions SET revoked_at=NOW() WHERE user_id=$1 AND revoked_at IS NULL",
+    const sessions = await client.query(
+      "UPDATE user_sessions SET revoked_at=NOW() WHERE user_id=$1 AND revoked_at IS NULL RETURNING id",
       [userId],
     );
+    await databaseSessions.closeUserSessions(sessions.rows.map((x) => x.id));
   });
 const setLock = async (userId, locked) => {
   const { rows } = await database.query(

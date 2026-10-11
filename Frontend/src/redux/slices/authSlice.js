@@ -73,6 +73,18 @@ export const loadCurrentUser = createAsyncThunk(
     }
   },
 );
+export const loadNavigationPermissions = createAsyncThunk(
+  "auth/navigationPermissions",
+  async (_, { rejectWithValue }) => {
+    try {
+      return (await getData("/users/me/database-permissions")).data;
+    } catch (error) {
+      return rejectWithValue(
+        error.response?.data?.message || "Không thể tải quyền truy cập",
+      );
+    }
+  },
+);
 export const logoutUser = createAsyncThunk("auth/logout", async () => {
   try {
     await postData("/auth/logout");
@@ -90,6 +102,8 @@ const authSlice = createSlice({
     validated: !localStorage.getItem("accessToken"),
     loading: false,
     error: null,
+    navigationPermissions: null,
+    permissionsLoading: false,
   },
   reducers: {
     clearAuthError: (state) => {
@@ -108,6 +122,7 @@ const authSlice = createSlice({
         state.accessToken = action.payload.accessToken;
         state.isAuthenticated = true;
         state.validated = true;
+        state.navigationPermissions = null;
         localStorage.setItem("accessToken", action.payload.accessToken);
         localStorage.setItem(
           "currentUser",
@@ -123,13 +138,12 @@ const authSlice = createSlice({
         state.validated = true;
         localStorage.setItem("currentUser", JSON.stringify(action.payload));
       })
-      .addCase(loadCurrentUser.rejected, (state) => {
-        state.user = null;
-        state.accessToken = null;
-        state.isAuthenticated = false;
+      .addCase(loadCurrentUser.rejected, (state, action) => {
+        // A profile API error (for example 403 or a temporary server error)
+        // must not be treated as an explicit logout. The API interceptor owns
+        // the 401/refresh-token flow and clears storage only when it is terminal.
         state.validated = true;
-        localStorage.removeItem("accessToken");
-        localStorage.removeItem("currentUser");
+        state.error = action.payload || "Không thể tải tài khoản";
       })
       .addCase(updateCurrentUser.fulfilled, (state, action) => {
         state.user = action.payload;
@@ -144,6 +158,21 @@ const authSlice = createSlice({
         state.accessToken = null;
         state.isAuthenticated = false;
         state.validated = true;
+        state.navigationPermissions = null;
+      })
+      .addCase(loadNavigationPermissions.pending, (state) => {
+        state.permissionsLoading = true;
+      })
+      .addCase(loadNavigationPermissions.fulfilled, (state, action) => {
+        state.permissionsLoading = false;
+        state.navigationPermissions = action.payload?.unrestricted
+          ? { unrestricted: true }
+          : { unrestricted: false, ...(action.payload?.features || {}) };
+      })
+      .addCase(loadNavigationPermissions.rejected, (state, action) => {
+        state.permissionsLoading = false;
+        state.navigationPermissions = { unrestricted: false };
+        state.error = action.payload;
       }),
 });
 export const { clearAuthError } = authSlice.actions;

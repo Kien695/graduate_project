@@ -18,6 +18,7 @@ const customerOrderRouter = require("./customerOrder.router");
 const customerAccessoryOrderRouter = require("./customerAccessoryOrder.router");
 const customerContractRouter = require("./customerContract.router");
 const notificationRouter = require("./notification.router");
+const dashboardRouter = require("./dashboard.router");
 module.exports = (app) => {
   app.use("/api/auth", authRouter);
   app.use("/api/users", userRouter);
@@ -39,4 +40,5 @@ module.exports = (app) => {
   app.use("/api/customer/accessory-orders", customerAccessoryOrderRouter);
   app.use("/api/customer/contracts", customerContractRouter);
   app.use("/api/notifications", notificationRouter);
+  app.use("/api/dashboard", dashboardRouter);
 };

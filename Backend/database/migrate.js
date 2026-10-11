@@ -8,6 +8,12 @@ const migrate = async () => {
     const sql = fs.readFileSync(path.join(__dirname, "schema.sql"), "utf8");
     await database.query(sql);
     await database.query(fs.readFileSync(
+      path.join(__dirname, "migrations", "20261010_staff_database_roles.sql"), "utf8",
+    ));
+    await database.query(fs.readFileSync(
+      path.join(__dirname, "migrations", "20261011_dashboard_overview.sql"), "utf8",
+    ));
+    await database.query(fs.readFileSync(
       path.join(__dirname, "migrations", "20260909_mac_four_levels.sql"), "utf8",
     ));
     console.log("Database schema migrated successfully");

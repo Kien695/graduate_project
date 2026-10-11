@@ -34,6 +34,8 @@ CREATE TABLE users (
 
     username VARCHAR(50) UNIQUE NOT NULL,
 
+    db_user VARCHAR(63) UNIQUE,
+
     password_hash TEXT NOT NULL,
 
     role VARCHAR(30)

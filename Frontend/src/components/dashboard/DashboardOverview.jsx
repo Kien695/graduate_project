@@ -1,8 +1,6 @@
-import { useEffect, useMemo } from "react";
-import { useDispatch, useSelector } from "react-redux";
-import { fetchVehicles } from "../../redux/slices/vehicleSlice";
-import { fetchOrders } from "../../redux/slices/orderSlice";
-import { fetchContracts } from "../../redux/slices/contractSlice";
+import { useEffect, useMemo, useState } from "react";
+import { getData } from "../../utils/api";
+import LoadingState from "../common/LoadingState";
 import StatusBadge from "../common/StatusBadge";
 import StatCard from "../common/StatCard";
 const money = (n) =>
@@ -13,66 +11,58 @@ const money = (n) =>
   }).format(Number(n) || 0);
 const date = (v) => (v ? new Date(v).toLocaleDateString("vi-VN") : "—");
 export default function DashboardOverview() {
-  const dispatch = useDispatch();
-  const vehicles = useSelector((s) => s.vehicles.items),
-    orders = useSelector((s) => s.orders.items),
-    contracts = useSelector((s) => s.contracts.items);
+  const [overview, setOverview] = useState(null);
+  const [loading, setLoading] = useState(true);
+  const [error, setError] = useState("");
   useEffect(() => {
-    dispatch(fetchVehicles({ limit: 100 }));
-    dispatch(fetchOrders());
-    dispatch(fetchContracts());
-  }, [dispatch]);
-  const revenue = contracts.reduce((s, c) => s + Number(c.paid_amount || 0), 0);
-  const status = useMemo(
-    () =>
-      orders.reduce(
-        (a, o) => ({ ...a, [o.status]: (a[o.status] || 0) + 1 }),
-        {},
-      ),
-    [orders],
-  );
+    getData("/dashboard")
+      .then((response) => setOverview(response.data))
+      .catch((e) => setError(e.response?.data?.message || "Không thể tải Dashboard"))
+      .finally(() => setLoading(false));
+  }, []);
+  const orders = overview?.recent_orders || [];
+  const contracts = overview?.recent_contracts || [];
+  const status = overview?.order_status || {};
   const chart = useMemo(() => {
-    const grouped = {};
-    for (const c of contracts) {
-      const d = new Date(c.created_at);
-      const key = Number.isNaN(d.getTime())
-        ? "Khác"
-        : `${d.getMonth() + 1}/${String(d.getFullYear()).slice(-2)}`;
-      grouped[key] = (grouped[key] || 0) + Number(c.paid_amount || 0);
-    }
-    return Object.entries(grouped).slice(-6);
-  }, [contracts]);
+    return (overview?.revenue_chart || []).map((item) => {
+      const d = new Date(item.period_start);
+      return [`${d.getMonth() + 1}/${String(d.getFullYear()).slice(-2)}`, Number(item.amount)];
+    }).reverse();
+  }, [overview]);
   const max = Math.max(...chart.map((x) => x[1]), 1);
   const cards = [
     [
       "car",
       "Tổng xe trong kho",
-      vehicles.length,
+      Number(overview?.vehicle_count || 0),
       "text-blue-600 bg-blue-50",
       "/admin/vehicles",
     ],
     [
       "orders",
       "Đơn đặt hàng",
-      orders.length,
+      Number(overview?.order_count || 0),
       "text-amber-600 bg-amber-50",
       "/admin/orders",
     ],
     [
       "contract",
       "Hợp đồng",
-      contracts.length,
+      Number(overview?.contract_count || 0),
       "text-violet-600 bg-violet-50",
       "/admin/contracts",
     ],
     [
       "dashboard",
       "Doanh thu",
-      money(revenue),
+      money(overview?.revenue),
       "text-emerald-600 bg-emerald-50",
       "/admin/contracts",
     ],
   ];
+  if (loading) return <LoadingState />;
+  if (error)
+    return <div className="rounded-2xl border border-rose-200 bg-rose-50 p-6 text-center font-semibold text-rose-700">{error}</div>;
   return (
     <div className="space-y-6">
       <div className="grid gap-4 sm:grid-cols-2 xl:grid-cols-4">
@@ -126,14 +116,14 @@ export default function DashboardOverview() {
             <div
               className="grid h-36 w-36 place-items-center rounded-full"
               style={{
-                background: orders.length
-                  ? `conic-gradient(#2563eb 0 ${((status.confirmed || 0) / orders.length) * 100}%,#10b981 0 ${(((status.confirmed || 0) + (status.completed || 0)) / orders.length) * 100}%,#f59e0b 0 ${(((status.confirmed || 0) + (status.completed || 0) + (status.pending || 0)) / orders.length) * 100}%,#f43f5e 0)`
+                background: Number(overview?.order_count)
+                  ? `conic-gradient(#2563eb 0 ${((status.confirmed || 0) / Number(overview.order_count)) * 100}%,#10b981 0 ${(((status.confirmed || 0) + (status.completed || 0)) / Number(overview.order_count)) * 100}%,#f59e0b 0 ${(((status.confirmed || 0) + (status.completed || 0) + (status.pending || 0)) / Number(overview.order_count)) * 100}%,#f43f5e 0)`
                   : "#e2e8f0",
               }}
             >
               <div className="grid h-24 w-24 place-items-center rounded-full bg-white dark:bg-slate-800">
                 <span className="text-2xl font-black text-slate-900 dark:text-white">
-                  {orders.length}
+                  {overview?.order_count || 0}
                 </span>
               </div>
             </div>
