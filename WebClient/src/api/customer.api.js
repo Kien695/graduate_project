@@ -1,0 +1,11 @@
+import client from "./client";
+export const createVehicleOrder = async (vehicleId) => (await client.post("/customer/orders", { vehicle_id: vehicleId })).data.data;
+export const getVehicleOrders = async () => (await client.get("/customer/orders")).data.data;
+export const createAccessoryOrder = async (accessoryId, quantity) => (await client.post("/customer/accessory-orders", { accessory_id: accessoryId, quantity })).data.data;
+export const getAccessoryOrders = async () => (await client.get("/customer/accessory-orders")).data.data;
+export const getAccessoryOrder = async (id) => (await client.get(`/customer/accessory-orders/${id}`)).data.data;
+export const cancelAccessoryOrder = async (id) => (await client.post(`/customer/accessory-orders/${id}/cancel`)).data.data;
+export const getInspection = async (orderId) => (await client.get(`/customer/orders/${orderId}/inspection`)).data.data;
+export const getContracts = async () => (await client.get("/customer/contracts")).data.data;
+export const getContract = async (id) => (await client.get(`/customer/contracts/${id}`)).data.data;
+export const confirmContract = async (id) => (await client.post(`/customer/contracts/${id}/confirm`)).data.data;

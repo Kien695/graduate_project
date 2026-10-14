@@ -1,0 +1,12 @@
+@import url("https://fonts.googleapis.com/css2?family=Montserrat:wght@400;500;600;700;800;900&display=swap");
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+@layer base { * { box-sizing: border-box } html { font-family: Montserrat, sans-serif; scroll-behavior: smooth } body { margin: 0; min-width: 320px; min-height: 100vh; @apply bg-slate-50 text-slate-800 dark:bg-slate-950 dark:text-slate-100 } button,input,select,textarea { font: inherit } button { cursor: pointer } }
+@layer components {
+  .container-page { @apply mx-auto w-full max-w-7xl px-4 sm:px-6 lg:px-8 }
+  .card { @apply rounded-2xl border border-slate-200 bg-white shadow-sm dark:border-slate-800 dark:bg-slate-900 }
+  .field { @apply w-full rounded-xl border border-slate-300 bg-white px-4 py-3 text-sm outline-none transition focus:border-red-500 focus:ring-4 focus:ring-red-100 dark:border-slate-700 dark:bg-slate-800 dark:focus:ring-red-950 }
+  .btn-primary { @apply inline-flex items-center justify-center rounded-xl bg-red-700 px-5 py-3 text-sm font-bold text-white transition hover:bg-red-800 disabled:cursor-not-allowed disabled:opacity-60 }
+  .btn-secondary { @apply inline-flex items-center justify-center rounded-xl border border-slate-300 px-5 py-3 text-sm font-bold transition hover:bg-slate-100 dark:border-slate-700 dark:hover:bg-slate-800 }
+}

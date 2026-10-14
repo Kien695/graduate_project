@@ -31,6 +31,7 @@ app.use(
       process.env.FRONTEND_URL,
       process.env.MOBILE_URL,
       mobileWebLocalOrigin,
+      process.env.WEB_CLIENT_URL,
     ],
     credentials: true,
   }),
