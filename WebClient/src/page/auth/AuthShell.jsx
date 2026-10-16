@@ -1,3 +1,43 @@
 import { Link } from "react-router-dom";
 import Icon from "../../components/common/Icon";
-export default function AuthShell({ title, subtitle, children, login }) { return <div className="min-h-screen bg-slate-950 lg:grid lg:grid-cols-2"><section className="relative hidden overflow-hidden lg:flex lg:flex-col lg:justify-between lg:p-14"><div className="absolute inset-0 bg-[radial-gradient(circle_at_20%_20%,#b91c1c_0,transparent_35%),radial-gradient(circle_at_80%_80%,#1e293b_0,transparent_40%)] opacity-80"/><div className="relative flex items-center gap-3 text-white"><span className="grid h-12 w-12 place-items-center rounded-2xl bg-red-700"><Icon name="car"/></span><span className="text-xl font-black">AUTO CAR</span></div><div className="relative max-w-xl text-white"><p className="text-sm font-bold uppercase tracking-[.3em] text-red-300">Trải nghiệm showroom số</p><h1 className="mt-5 text-5xl font-black leading-tight">Chiếc xe hoàn hảo, hành trình của riêng bạn.</h1><p className="mt-5 text-slate-300">Khám phá, đặt xe, theo dõi hợp đồng và kiểm định ở một nơi.</p></div><p className="relative text-xs text-slate-500">© 2026 Auto Car</p></section><section className="flex min-h-screen items-center justify-center bg-white px-5 py-10 dark:bg-slate-950"><div className="w-full max-w-md"><Link to="/" className="mb-9 flex items-center gap-3 lg:hidden"><span className="grid h-10 w-10 place-items-center rounded-xl bg-red-700 text-white"><Icon name="car"/></span><b>AUTO CAR</b></Link><h2 className="text-3xl font-black">{title}</h2><p className="mt-2 text-sm text-slate-500">{subtitle}</p><div className="mt-8">{children}</div><p className="mt-7 text-center text-sm text-slate-500">{login ? "Chưa có tài khoản?" : "Đã có tài khoản?"} <Link className="font-bold text-red-700" to={login ? "/register" : "/login"}>{login ? "Đăng ký ngay" : "Đăng nhập"}</Link></p></div></section></div>; }
+import background from "../../../assets/lambor.webp";
+export default function AuthShell({ title, subtitle, children, login }) {
+  return (
+    <main className="relative flex min-h-screen items-center justify-center overflow-hidden p-6">
+      <img
+        src={background}
+        className="absolute inset-0 h-full w-full object-cover"
+        alt="Showroom ô tô hiện đại"
+      />
+      <div className="absolute inset-0 bg-gradient-to-b from-[#030914]/55 via-[#030914]/72 to-[#030914]/85" />
+      <div className="relative w-full max-w-md rounded-3xl border border-white/15 bg-slate-900/20 p-9 shadow-2xl shadow-black/45 backdrop-blur-xl sm:p-10">
+        <Link to="/" className="mb-7 flex items-center justify-center gap-3">
+          <span className="grid h-10 w-10 place-items-center rounded-xl bg-red-700 text-white">
+            <Icon name="car" />
+          </span>
+          <span className="text-lg font-black tracking-tight text-white">
+            AUTO CAR
+          </span>
+        </Link>
+        <h2 className="text-center text-3xl font-black text-white">
+          {title}
+        </h2>
+        {subtitle && (
+          <p className="mt-2 text-center text-sm text-slate-300">
+            {subtitle}
+          </p>
+        )}
+        <div className="mt-8">{children}</div>
+        <p className="mt-7 text-center text-sm text-slate-300">
+          {login ? "Chưa có tài khoản?" : "Đã có tài khoản?"}{" "}
+          <Link
+            className="font-bold text-red-400 hover:text-red-300"
+            to={login ? "/register" : "/login"}
+          >
+            {login ? "Đăng ký tài khoản" : "Đăng nhập"}
+          </Link>
+        </p>
+      </div>
+    </main>
+  );
+}

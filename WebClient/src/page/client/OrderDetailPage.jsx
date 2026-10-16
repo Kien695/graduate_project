@@ -1,10 +1,195 @@
 import { useEffect, useState } from "react";
 import { Link, useParams } from "react-router-dom";
 import { toast } from "react-toastify";
-import { cancelAccessoryOrder, getAccessoryOrder, getInspection, getVehicleOrders } from "../../api/customer.api";
+import {
+  cancelAccessoryOrder,
+  getAccessoryOrder,
+  getInspection,
+  getVehicleOrders,
+} from "../../api/customer.api";
 import StatusBadge from "../../components/common/StatusBadge";
 import { ErrorState, LoadingState } from "../../components/common/States";
 import Icon from "../../components/common/Icon";
 import { apiMessage, formatDate, formatVND, imageOf } from "../../utils/format";
-export default function OrderDetailPage() { const { type, id } = useParams(); const accessory = type === "accessory"; const [order, setOrder] = useState(null); const [inspection, setInspection] = useState(null); const [loading, setLoading] = useState(true); const [working, setWorking] = useState(false); const [error, setError] = useState(""); const load = () => { setLoading(true); const request = accessory ? getAccessoryOrder(id) : getVehicleOrders().then((x) => x.find((o) => String(o.id) === String(id)) || Promise.reject({response:{status:404}})); request.then(async (o) => { setOrder(o); if (!accessory) { try { setInspection(await getInspection(id)); } catch { setInspection(null); } } }).catch((e) => setError(e.response?.status === 404 ? "Không tìm thấy đơn hàng." : "Không thể tải đơn hàng.")).finally(() => setLoading(false)); }; useEffect(load, [accessory,id]); const cancel = async () => { if (!window.confirm("Bạn có chắc muốn hủy đơn phụ kiện này?")) return; setWorking(true); try { await cancelAccessoryOrder(id); toast.success("Đã hủy đơn hàng."); await load(); } catch (e) { toast.error(apiMessage(e,"Không thể hủy đơn hàng.")); } finally { setWorking(false); } }; if (loading) return <LoadingState/>; if (!order) return <div className="container-page py-10"><ErrorState message={error} onRetry={load}/></div>; return <div className="container-page max-w-4xl py-8"><Link to="/orders" className="mb-6 inline-flex items-center gap-2 text-sm font-bold text-slate-500"><Icon name="back"/>Đơn hàng</Link><div className="mb-6 flex flex-wrap items-center justify-between gap-4"><div><p className="text-sm text-slate-500">Chi tiết đơn hàng</p><h1 className="mt-1 text-2xl font-black">#{accessory ? "PK" : "DH"}{String(order.id).padStart(6,"0")}</h1></div><StatusBadge status={order.status}/></div><div className="grid gap-6 md:grid-cols-2"><div className="card overflow-hidden"><div className="aspect-[16/10] bg-slate-100">{imageOf(order) && <img src={imageOf(order)} className="h-full w-full object-cover" alt=""/>}</div><div className="p-5"><h2 className="text-xl font-black capitalize">{accessory ? order.accessory_name : `${order.brand} ${order.model}`}</h2><p className="mt-2 text-sm text-slate-500">Ngày đặt: {formatDate(accessory ? order.created_at : order.order_date, true)}</p><p className="mt-4 text-2xl font-black text-red-700">{formatVND(order.total_amount || order.price)}</p>{accessory && <p className="mt-2 text-sm">Số lượng: <b>{order.quantity}</b></p>}</div></div><div className="space-y-6">{accessory ? <div className="card p-6"><h2 className="font-black">Thông tin xử lý</h2><p className="mt-3 text-sm leading-6 text-slate-500">Đơn phụ kiện chỉ có thể hủy khi còn ở trạng thái chờ xử lý. Kho hàng sẽ được hoàn lại tự động.</p>{String(order.status).toUpperCase() === "PENDING" ? <button className="mt-6 w-full rounded-xl border border-red-300 px-4 py-3 font-bold text-red-700 hover:bg-red-50" disabled={working} onClick={cancel}>{working ? "Đang hủy..." : "Hủy đơn hàng"}</button> : <p className="mt-5 rounded-xl bg-slate-100 p-4 text-sm dark:bg-slate-800">Đơn đã được xử lý nên không thể hủy.</p>}</div> : <div className="card p-6"><div className="flex items-center justify-between"><h2 className="font-black">Kiểm định xe</h2><button onClick={load} className="rounded-lg p-2 hover:bg-slate-100"><Icon name="refresh"/></button></div>{inspection ? <div className="mt-5 space-y-4"><StatusBadge status={inspection.status}/><Info label="Ngày kiểm tra" value={formatDate(inspection.inspection_date)}/><Info label="Ghi chú" value={inspection.note || "Chưa có ghi chú từ nhân viên kiểm định."}/></div> : <p className="mt-4 text-sm text-slate-500">Chưa có dữ liệu kiểm định cho đơn hàng này.</p>}</div>}<div className="rounded-2xl border border-amber-200 bg-amber-50 p-5 text-sm leading-6 text-amber-900">Trạng thái được cập nhật bởi nhân viên Auto Car. Vui lòng làm mới để xem thông tin mới nhất.</div></div></div></div>; }
-function Info({label,value}) { return <div><p className="text-xs text-slate-500">{label}</p><p className="mt-1 text-sm font-bold">{value}</p></div>; }
+export default function OrderDetailPage() {
+  const { type, id } = useParams();
+  const accessory = type === "accessory";
+  const [order, setOrder] = useState(null);
+  const [inspection, setInspection] = useState(null);
+  const [loading, setLoading] = useState(true);
+  const [working, setWorking] = useState(false);
+  const [error, setError] = useState("");
+  const load = () => {
+    setLoading(true);
+    const request = accessory
+      ? getAccessoryOrder(id)
+      : getVehicleOrders().then(
+          (x) =>
+            x.find((o) => String(o.id) === String(id)) ||
+            Promise.reject({ response: { status: 404 } }),
+        );
+    request
+      .then(async (o) => {
+        setOrder(o);
+        if (!accessory) {
+          try {
+            setInspection(await getInspection(id));
+          } catch {
+            setInspection(null);
+          }
+        }
+      })
+      .catch((e) =>
+        setError(
+          e.response?.status === 404
+            ? "Không tìm thấy đơn hàng."
+            : "Không thể tải đơn hàng.",
+        ),
+      )
+      .finally(() => setLoading(false));
+  };
+  useEffect(load, [accessory, id]);
+  const cancel = async () => {
+    if (!window.confirm("Bạn có chắc muốn hủy đơn phụ kiện này?")) return;
+    setWorking(true);
+    try {
+      await cancelAccessoryOrder(id);
+      toast.success("Đã hủy đơn hàng.");
+      await load();
+    } catch (e) {
+      toast.error(apiMessage(e, "Không thể hủy đơn hàng."));
+    } finally {
+      setWorking(false);
+    }
+  };
+  if (loading) return <LoadingState />;
+  if (!order)
+    return (
+      <div className="container-page py-10">
+        <ErrorState message={error} onRetry={load} />
+      </div>
+    );
+  return (
+    <div className="container-page max-w-4xl py-8">
+      <Link
+        to="/orders"
+        className="mb-6 inline-flex items-center gap-2 text-sm font-bold text-slate-500"
+      >
+        <Icon name="back" />
+        Đơn hàng
+      </Link>
+      <div className="mb-6 flex flex-wrap items-center justify-between gap-4">
+        <div>
+          <p className="text-sm text-slate-500">Chi tiết đơn hàng</p>
+          <h1 className="mt-1 text-2xl font-black">
+            #{accessory ? "PK" : "DH"}
+            {String(order.id).padStart(6, "0")}
+          </h1>
+        </div>
+        <StatusBadge status={order.status} />
+      </div>
+      <div className="grid gap-6 md:grid-cols-2">
+        <div className="card overflow-hidden">
+          <div className="aspect-[16/10] bg-slate-100">
+            {imageOf(order) && (
+              <img
+                src={imageOf(order)}
+                className="h-full w-full object-cover"
+                alt=""
+              />
+            )}
+          </div>
+          <div className="p-5">
+            <h2 className="text-xl font-black capitalize">
+              {accessory
+                ? order.accessory_name
+                : `${order.brand} ${order.model}`}
+            </h2>
+            <p className="mt-2 text-sm text-slate-500">
+              Ngày đặt:{" "}
+              {formatDate(
+                accessory ? order.created_at : order.order_date,
+                true,
+              )}
+            </p>
+            <p className="mt-4 text-2xl font-black text-red-700">
+              {formatVND(order.total_amount || order.price)}
+            </p>
+            {accessory && (
+              <p className="mt-2 text-sm">
+                Số lượng: <b>{order.quantity}</b>
+              </p>
+            )}
+          </div>
+        </div>
+        <div className="space-y-6">
+          {accessory ? (
+            <div className="card p-6">
+              <h2 className="font-black">Thông tin xử lý</h2>
+              <p className="mt-3 text-sm leading-6 text-slate-500">
+                Đơn phụ kiện chỉ có thể hủy khi còn ở trạng thái chờ xử lý.
+              </p>
+              {String(order.status).toUpperCase() === "PENDING" ? (
+                <button
+                  className="mt-6 w-full rounded-xl border border-red-300 px-4 py-3 font-bold text-red-700 hover:bg-red-50"
+                  disabled={working}
+                  onClick={cancel}
+                >
+                  {working ? "Đang hủy..." : "Hủy đơn hàng"}
+                </button>
+              ) : (
+                <p className="mt-5 rounded-xl bg-slate-100 p-4 text-sm dark:bg-slate-800">
+                  Đơn đã được xử lý nên không thể hủy.
+                </p>
+              )}
+            </div>
+          ) : (
+            <div className="card p-6">
+              <div className="flex items-center justify-between">
+                <h2 className="font-black">Kiểm định xe</h2>
+                <button
+                  onClick={load}
+                  className="rounded-lg p-2 hover:bg-slate-100"
+                >
+                  <Icon name="refresh" />
+                </button>
+              </div>
+              {inspection ? (
+                <div className="mt-5 space-y-4">
+                  <StatusBadge status={inspection.status} />
+                  <Info
+                    label="Ngày kiểm tra"
+                    value={formatDate(inspection.inspection_date)}
+                  />
+                  <Info
+                    label="Ghi chú"
+                    value={
+                      inspection.note ||
+                      "Chưa có ghi chú từ nhân viên kiểm định."
+                    }
+                  />
+                </div>
+              ) : (
+                <p className="mt-4 text-sm text-slate-500">
+                  Chưa có dữ liệu kiểm định cho đơn hàng này.
+                </p>
+              )}
+            </div>
+          )}
+          <div className="rounded-2xl border border-amber-200 bg-amber-50 p-5 text-sm leading-6 text-amber-900">
+            Trạng thái được cập nhật bởi nhân viên Auto Car. Vui lòng làm mới để
+            xem thông tin mới nhất.
+          </div>
+        </div>
+      </div>
+    </div>
+  );
+}
+function Info({ label, value }) {
+  return (
+    <div>
+      <p className="text-xs text-slate-500">{label}</p>
+      <p className="mt-1 text-sm font-bold">{value}</p>
+    </div>
+  );
+}
