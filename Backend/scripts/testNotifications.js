@@ -12,8 +12,10 @@ const notification = require('../service/notification.service');
     const second = await client.query(`INSERT INTO users(username,password_hash,full_name,role,status,is_active)
       VALUES($1,'test','Other Customer','customer','ACTIVE',TRUE) RETURNING id`, [`notification_other_${Date.now()}`]);
     const customer = await client.query('INSERT INTO customers(user_id,full_name) VALUES($1,$2) RETURNING id', [first.rows[0].id, 'Notification Customer']);
-    const created = await notification.createForCustomer(client, customer.rows[0].id, { title: 'Test', message: 'Customer update event', type: 'CUSTOMER', referenceId: customer.rows[0].id });
-    assert.equal(created.user_id, first.rows[0].id);
+    await notification.createForCustomer(client, customer.rows[0].id, { title: 'Test', message: 'Customer update event', type: 'CUSTOMER', referenceId: customer.rows[0].id });
+    const inserted = await client.query('SELECT * FROM notifications WHERE user_id=$1', [first.rows[0].id]);
+    assert.equal(inserted.rowCount, 1);
+    const created = inserted.rows[0];
     const owner = await client.query('SELECT * FROM notifications WHERE id=$1 AND user_id=$2', [created.id, first.rows[0].id]);
     const stranger = await client.query('SELECT * FROM notifications WHERE id=$1 AND user_id=$2', [created.id, second.rows[0].id]);
     assert.equal(owner.rowCount, 1);

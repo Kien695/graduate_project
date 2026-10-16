@@ -8,12 +8,11 @@ const create = async (executor, input) => {
   const type = String(input.type || "").toUpperCase();
   if (!TYPES.has(type))
     throw new ErrorHandler("Loại thông báo không hợp lệ", 400);
-  const { rows } = await db.query(
+  await db.query(
     `INSERT INTO notifications(user_id,title,message,type,reference_id)
-     VALUES($1,$2,$3,$4,$5) RETURNING *`,
+     VALUES($1,$2,$3,$4,$5)`,
     [input.userId, input.title, input.message, type, input.referenceId || null],
   );
-  return rows[0];
 };
 
 const createForCustomer = async (executor, customerId, input) => {

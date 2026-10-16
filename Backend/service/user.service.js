@@ -7,6 +7,7 @@ const {
   encryptProfileValue,
   decryptProfileValue,
   emailLookupHash,
+  phoneLookupHash,
 } = require("../utils/profileEncryption");
 const uploader = require("./upload.service");
 const storageQuota = require("./storageQuota.service");
@@ -66,6 +67,16 @@ const updateMe = (id, input) =>
         if (duplicate.rows[0])
           throw new ErrorHandler("Email da duoc su dung", 409);
       }
+      if (phone) {
+        const duplicatePhone = await client.query(
+          "SELECT id FROM users WHERE phone_lookup_hash=$1 AND id<>$2",
+          [phoneLookupHash(phone), id],
+        );
+        if (duplicatePhone.rows[0])
+          throw new ErrorHandler("Số điện thoại đã tồn tại!", 409, [
+            { field: "phone", message: "Số điện thoại đã tồn tại!" },
+          ]);
+      }
       const encryptedEmail =
         input.email === undefined ? null : encryptProfileValue(email);
       const encryptedPhone =
@@ -77,6 +88,7 @@ const updateMe = (id, input) =>
        email_encrypted=COALESCE($3,email_encrypted),
        email_lookup_hash=COALESCE($4,email_lookup_hash),
        phone_encrypted=CASE WHEN $5::boolean THEN $6 ELSE phone_encrypted END,
+       phone_lookup_hash=CASE WHEN $5::boolean THEN $7 ELSE phone_lookup_hash END,
        updated_at=NOW() WHERE id=$1`,
         [
           id,
@@ -85,6 +97,7 @@ const updateMe = (id, input) =>
           email ? emailLookupHash(email) : null,
           input.phone !== undefined,
           encryptedPhone,
+          phone ? phoneLookupHash(phone) : null,
         ],
       );
       await client.query(
