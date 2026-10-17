@@ -34,6 +34,12 @@ const emailLookupHash = (email) =>
     .update(String(email || "").trim().toLowerCase())
     .digest("hex");
 
+const phoneLookupHash = (phone) =>
+  crypto
+    .createHmac("sha256", getKey())
+    .update(String(phone || "").replace(/\D/g, ""))
+    .digest("hex");
+
 const encryptCustomerProfile = (input = {}) => ({
   ...(input.cccd !== undefined
     ? { cccd_encrypted: encryptProfileValue(input.cccd) }
@@ -67,6 +73,7 @@ module.exports = {
   encryptProfileValue,
   decryptProfileValue,
   emailLookupHash,
+  phoneLookupHash,
   encryptCustomerProfile,
   decryptCustomerProfile,
 };

@@ -1,6 +1,6 @@
 import client from "./client";
 export const loginRequest = async (payload) =>
-  (await client.post("/auth/login", { ...payload, deviceType: "web" })).data
+  (await client.post("/auth/login", { ...payload, deviceType: "PC" })).data
     .data;
 export const registerCustomer = async (payload) =>
   (await client.post("/auth/register/customer", payload)).data;

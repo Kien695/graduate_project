@@ -23,10 +23,12 @@ ALTER TABLE users ADD COLUMN IF NOT EXISTS updated_at TIMESTAMPTZ DEFAULT NOW();
 ALTER TABLE users ADD COLUMN IF NOT EXISTS email_encrypted TEXT;
 ALTER TABLE users ADD COLUMN IF NOT EXISTS phone_encrypted TEXT;
 ALTER TABLE users ADD COLUMN IF NOT EXISTS email_lookup_hash CHAR(64);
+ALTER TABLE users ADD COLUMN IF NOT EXISTS phone_lookup_hash CHAR(64);
 ALTER TABLE users ADD COLUMN IF NOT EXISTS db_user VARCHAR(63);
 UPDATE users SET full_name=COALESCE(full_name,username,email),failed_login_attempts=COALESCE(failed_login_count,failed_login_attempts,0),is_active=UPPER(COALESCE(status,'ACTIVE')) NOT IN ('INACTIVE','DISABLED'),is_locked=COALESCE(is_locked,FALSE) OR locked_until>NOW();
 CREATE UNIQUE INDEX IF NOT EXISTS users_email_unique_ci ON users(LOWER(email)) WHERE email IS NOT NULL;
 CREATE UNIQUE INDEX IF NOT EXISTS users_email_lookup_hash_unique ON users(email_lookup_hash) WHERE email_lookup_hash IS NOT NULL;
+CREATE UNIQUE INDEX IF NOT EXISTS users_phone_lookup_hash_unique ON users(phone_lookup_hash) WHERE phone_lookup_hash IS NOT NULL;
 CREATE UNIQUE INDEX IF NOT EXISTS users_db_user_unique_ci ON users(LOWER(db_user)) WHERE db_user IS NOT NULL;
 
 CREATE TABLE IF NOT EXISTS employees (

@@ -21,6 +21,17 @@ const FEATURES = Object.freeze({
       "contracts",
       "payments",
     ],
+    // Xác nhận/Hủy/Hoàn tất đơn (transition) cùng transaction còn cập nhật
+    // trạng thái xe và ghi audit log/notification — thiếu các quyền này thì
+    // UPDATE orders vẫn pass nhưng UPDATE vehicles ngay sau đó bị Postgres
+    // chặn (42501), toàn bộ transaction rollback.
+    supportPrivileges: {
+      UPDATE: [
+        { table: "vehicles", privilege: "UPDATE" },
+        { table: "audit_logs", privilege: "INSERT" },
+        { table: "notifications", privilege: "INSERT" },
+      ],
+    },
     operations: PRIVILEGES,
   },
   contracts: {
@@ -52,7 +63,21 @@ const FEATURES = Object.freeze({
   },
   inspections: { label: "Kiểm định xe", tables: ["inspections", "inspection_images"], readTables: ["vehicles", "orders", "contracts"], operations: PRIVILEGES },
   customers: { label: "Khách hàng", tables: ["customers", "customer_storage"], operations: PRIVILEGES },
-  accessoryOrders: { label: "Đơn phụ kiện", tables: ["accessory_orders", "accessory_order_items"], readTables: ["customers", "accessories"], operations: PRIVILEGES },
+  accessoryOrders: {
+    label: "Đơn phụ kiện",
+    tables: ["accessory_orders"],
+    readTables: ["customers", "accessories"],
+    // Hủy đơn phụ kiện hoàn lại tồn kho (UPDATE accessories) trong cùng
+    // transaction, cộng audit log/notification — cùng lý do như orders.
+    supportPrivileges: {
+      UPDATE: [
+        { table: "accessories", privilege: "UPDATE" },
+        { table: "audit_logs", privilege: "INSERT" },
+        { table: "notifications", privilege: "INSERT" },
+      ],
+    },
+    operations: PRIVILEGES,
+  },
 });
 
 const quoteIdentifier = (value) => {

@@ -4,6 +4,7 @@ const {
   encryptCustomerProfile,
   decryptCustomerProfile,
   emailLookupHash,
+  phoneLookupHash,
 } = require("../utils/profileEncryption");
 const storageQuota = require("./storageQuota.service");
 const notification = require("./notification.service");
@@ -89,6 +90,7 @@ const syncCustomerUser = async (client, customer, source) => {
        email_lookup_hash=CASE WHEN $2::boolean THEN $4 ELSE email_lookup_hash END,
        phone=CASE WHEN $5::boolean THEN NULL ELSE phone END,
        phone_encrypted=CASE WHEN $5::boolean THEN $6 ELSE phone_encrypted END,
+       phone_lookup_hash=CASE WHEN $5::boolean THEN $7 ELSE phone_lookup_hash END,
        updated_at=NOW() WHERE id=$1`,
     [
       customer.user_id,
@@ -97,6 +99,7 @@ const syncCustomerUser = async (client, customer, source) => {
       source.email !== undefined ? emailLookupHash(source.email) : null,
       source.phone !== undefined,
       customer.phone_encrypted,
+      source.phone !== undefined ? phoneLookupHash(source.phone) : null,
     ],
   );
 };

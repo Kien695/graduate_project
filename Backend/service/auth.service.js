@@ -13,6 +13,7 @@ const {
   encryptProfileValue,
   decryptProfileValue,
   emailLookupHash,
+  phoneLookupHash,
 } = require("../utils/profileEncryption");
 const MAX_FAILURES = Number(process.env.MAX_FAILED_LOGIN_ATTEMPTS || 5);
 const LOCK_MINUTES = Number(process.env.ACCOUNT_LOCK_MINUTES || 30);
@@ -38,6 +39,16 @@ const registerCustomer = async (input) => {
           { field: "email", message: "Email này đã được sử dụng" },
         ]);
 
+      const phoneHash = phoneLookupHash(input.phone);
+      const existingPhone = await client.query(
+        "SELECT id FROM users WHERE phone_lookup_hash=$1 LIMIT 1",
+        [phoneHash],
+      );
+      if (existingPhone.rows[0])
+        throw new ErrorHandler("Số điện thoại đã tồn tại!", 409, [
+          { field: "phone", message: "Số điện thoại đã tồn tại!" },
+        ]);
+
       const passwordHash = await hashPassword(input.password);
       const encryptedEmail = encryptProfileValue(input.email);
       const encryptedPhone = encryptProfileValue(input.phone);
@@ -45,8 +56,8 @@ const registerCustomer = async (input) => {
       const { rows } = await client.query(
         `INSERT INTO users(
            username,password_hash,role,email,phone,email_encrypted,phone_encrypted,
-           email_lookup_hash,full_name,status,is_active,is_locked,failed_login_attempts,security_level_id
-         ) VALUES($1,$2,'CUSTOMER',NULL,NULL,$3,$4,$5,$6,'ACTIVE',TRUE,FALSE,0,(SELECT id FROM security_levels WHERE name='PUBLIC'))
+           email_lookup_hash,phone_lookup_hash,full_name,status,is_active,is_locked,failed_login_attempts,security_level_id
+         ) VALUES($1,$2,'CUSTOMER',NULL,NULL,$3,$4,$5,$6,$7,'ACTIVE',TRUE,FALSE,0,(SELECT id FROM security_levels WHERE name='PUBLIC'))
          RETURNING id`,
         [
           `customer-${crypto.randomUUID()}`,
@@ -54,6 +65,7 @@ const registerCustomer = async (input) => {
           encryptedEmail,
           encryptedPhone,
           lookupHash,
+          phoneHash,
           input.name,
         ],
       );
@@ -73,10 +85,15 @@ const registerCustomer = async (input) => {
       );
     });
   } catch (error) {
-    if (error.code === "23505")
+    if (error.code === "23505") {
+      if (String(error.constraint).includes("phone"))
+        throw new ErrorHandler("Số điện thoại đã tồn tại!", 409, [
+          { field: "phone", message: "Số điện thoại đã tồn tại!" },
+        ]);
       throw new ErrorHandler("Email đã tồn tại", 409, [
         { field: "email", message: "Email này đã được sử dụng" },
       ]);
+    }
     throw error;
   }
 };

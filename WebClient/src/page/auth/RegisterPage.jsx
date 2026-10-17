@@ -4,11 +4,125 @@ import { toast } from "react-toastify";
 import { registerCustomer } from "../../api/auth.api";
 import AuthShell from "./AuthShell";
 import { Field } from "./LoginPage";
-const initial = { name: "", email: "", phone: "", password: "", confirmPassword: "" };
+const initial = {
+  name: "",
+  email: "",
+  phone: "",
+  password: "",
+  confirmPassword: "",
+};
 const normalizePhone = (value) => {
   const digits = String(value).replace(/\D/g, "");
   return digits.startsWith("84") && digits.length === 11
     ? `0${digits.slice(2)}`
     : digits.slice(0, 10);
 };
-export default function RegisterPage() { const [form, setForm] = useState(initial); const [errors, setErrors] = useState({}); const [serverError, setServerError] = useState(""); const [loading, setLoading] = useState(false); const navigate = useNavigate(); const set = (key, value) => { setForm({...form,[key]:value}); setErrors({...errors,[key]:undefined}); }; const submit = async (e) => { e.preventDefault(); const x = {}; const phone = normalizePhone(form.phone); if (!form.name.trim()) x.name = "Vui lòng nhập họ tên"; if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(form.email.trim())) x.email = "Email không đúng định dạng"; if (phone.length !== 10) x.phone = "Số điện thoại phải gồm đúng 10 chữ số"; else if (!/^(03|05|07|08|09)\d{8}$/.test(phone)) x.phone = "Đầu số phải là 03, 05, 07, 08 hoặc 09"; if (form.password.length < 6) x.password = "Mật khẩu tối thiểu 6 ký tự"; if (form.confirmPassword !== form.password) x.confirmPassword = "Mật khẩu không khớp"; setErrors(x); if (Object.keys(x).length) return; setLoading(true); setServerError(""); try { await registerCustomer({ ...form, name: form.name.trim(), email: form.email.trim().toLowerCase(), phone }); toast.success("Đăng ký thành công. Hãy đăng nhập!"); navigate("/login", { replace: true }); } catch (err) { const response = err.response?.data; const fields = {}; (response?.errors || []).forEach((i) => { if (i.field) fields[i.field] = i.message; }); setErrors(fields); setServerError(Object.keys(fields).length ? "" : response?.message || "Không thể đăng ký."); } finally { setLoading(false); } }; return <AuthShell title="Tạo tài khoản" subtitle="Điền thông tin để bắt đầu khám phá showroom."><form onSubmit={submit} className="space-y-4"><Field label="Họ và tên" value={form.name} error={errors.name} onChange={(v) => set("name",v)}/><Field label="Email" type="email" value={form.email} error={errors.email} onChange={(v) => set("email",v)}/><Field label="Số điện thoại" inputMode="tel" placeholder="Ví dụ: 0912345678" value={form.phone} error={errors.phone} onChange={(v) => set("phone",normalizePhone(v))}/><Field label="Mật khẩu" type="password" value={form.password} error={errors.password} onChange={(v) => set("password",v)}/><Field label="Nhập lại mật khẩu" type="password" value={form.confirmPassword} error={errors.confirmPassword} onChange={(v) => set("confirmPassword",v)}/>{serverError && <p className="text-sm text-red-600">{serverError}</p>}<button className="btn-primary w-full" disabled={loading}>{loading ? "Đang đăng ký..." : "Đăng ký"}</button></form></AuthShell>; }
+export default function RegisterPage() {
+  const [form, setForm] = useState(initial);
+  const [errors, setErrors] = useState({});
+  const [serverError, setServerError] = useState("");
+  const [loading, setLoading] = useState(false);
+  const navigate = useNavigate();
+  const set = (key, value) => {
+    setForm({ ...form, [key]: value });
+    setErrors({ ...errors, [key]: undefined });
+  };
+  const submit = async (e) => {
+    e.preventDefault();
+    const x = {};
+    const phone = normalizePhone(form.phone);
+    if (!form.name.trim()) x.name = "Vui lòng nhập họ tên";
+    if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(form.email.trim()))
+      x.email = "Email không đúng định dạng";
+    if (phone.length !== 10) x.phone = "Số điện thoại phải gồm đúng 10 chữ số";
+    else if (!/^(03|05|07|08|09)\d{8}$/.test(phone))
+      x.phone = "Đầu số phải là 03, 05, 07, 08 hoặc 09";
+    if (form.password.length < 6) x.password = "Mật khẩu tối thiểu 6 ký tự";
+    if (form.confirmPassword !== form.password)
+      x.confirmPassword = "Mật khẩu không khớp";
+    setErrors(x);
+    if (Object.keys(x).length) return;
+    setLoading(true);
+    setServerError("");
+    try {
+      await registerCustomer({
+        ...form,
+        name: form.name.trim(),
+        email: form.email.trim().toLowerCase(),
+        phone,
+      });
+      toast.success("Đăng ký thành công. Hãy đăng nhập!");
+      navigate("/login", { replace: true });
+    } catch (err) {
+      const response = err.response?.data;
+      const fields = {};
+      (response?.errors || []).forEach((i) => {
+        if (i.field) fields[i.field] = i.message;
+      });
+      setErrors(fields);
+      setServerError(
+        Object.keys(fields).length
+          ? ""
+          : response?.message || "Không thể đăng ký.",
+      );
+    } finally {
+      setLoading(false);
+    }
+  };
+  return (
+    <AuthShell
+      title="Đăng ký tài khoản"
+      subtitle=""
+    >
+      <form onSubmit={submit} className="space-y-4">
+        <Field
+          label="Họ và tên"
+          value={form.name}
+          error={errors.name}
+          onChange={(v) => set("name", v)}
+          placeholder="Họ và tên của bạn!"
+        />
+        <Field
+          label="Email"
+          type="email"
+          value={form.email}
+          error={errors.email}
+          onChange={(v) => set("email", v)}
+          placeholder="Nhập email của bạn!"
+        />
+        <Field
+          label="Số điện thoại"
+          inputMode="tel"
+          placeholder="Nhập số điện thoại của bạn!"
+          value={form.phone}
+          error={errors.phone}
+          onChange={(v) => set("phone", normalizePhone(v))}
+        />
+        <Field
+          label="Mật khẩu"
+          type="password"
+          value={form.password}
+          error={errors.password}
+          onChange={(v) => set("password", v)}
+          placeholder="Mật khẩu tối thiểu 6 ký tự!"
+        />
+        <Field
+          label="Nhập lại mật khẩu"
+          type="password"
+          value={form.confirmPassword}
+          error={errors.confirmPassword}
+          onChange={(v) => set("confirmPassword", v)}
+          placeholder="Nhập lại mật khẩu!"
+        />
+        {serverError && (
+          <p className="rounded-xl border border-red-400/30 bg-red-500/10 p-3 text-sm font-semibold text-red-200">
+            {serverError}
+          </p>
+        )}
+        <button className="btn-primary w-full" disabled={loading}>
+          {loading ? "Đang đăng ký..." : "Đăng ký"}
+        </button>
+      </form>
+    </AuthShell>
+  );
+}
