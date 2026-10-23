@@ -22,6 +22,11 @@ const poolConfig = (dbUser, rawPassword) => ({
 const createVerifiedPool = async (dbUser, rawPassword) => {
   const pool = new Pool(poolConfig(dbUser, rawPassword));
   pool.on("error", () => undefined);
+  // See database/database.js: Neon's pooler can hand back a connection with
+  // an empty search_path, so unqualified table names fail to resolve.
+  pool.on("connect", (client) => {
+    client.query("SET search_path TO public").catch(() => undefined);
+  });
   try {
     const { rows } = await pool.query("SELECT current_user");
     if (rows[0]?.current_user !== dbUser)

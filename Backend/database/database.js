@@ -15,6 +15,15 @@ const database = new Pool({
 });
 
 database.on("error", (error) => console.error("Unexpected PostgreSQL pool error:", error.message));
+// Neon's pooler endpoint rejects "-c search_path=..." in the connection
+// startup options and can hand back a connection with an empty search_path,
+// so unqualified table names (e.g. "users") fail to resolve. Set it per
+// connection instead, which Neon's pooler does accept as an ordinary query.
+database.on("connect", (client) => {
+  client.query("SET search_path TO public").catch((error) =>
+    console.error("Failed to set search_path:", error.message),
+  );
+});
 
 const connectDB = async () => {
   try {
