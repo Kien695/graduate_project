@@ -43,6 +43,8 @@ export default function InspectionDetailModal({
 
   if (!inspection && !loading) return null;
   const status = String(inspection?.status || "pending").toLowerCase();
+  const completedChecklistCount = checklist.filter((item) => item.checked).length;
+  const canPass = checklist.length >= 6 && completedChecklistCount >= 6;
   const run = async (thunk, data, successMessage) => {
     try {
       await dispatch(thunk({ id: inspection.id, data })).unwrap();
@@ -330,8 +332,13 @@ export default function InspectionDetailModal({
                 </button>
                 <button
                   type="button"
-                  disabled={submitting}
+                  disabled={submitting || !canPass}
                   onClick={() => finish("pass")}
+                  title={
+                    canPass
+                      ? "Hoàn thành kiểm định với kết quả PASS"
+                      : `Cần hoàn thành đủ 6 checklist (${completedChecklistCount}/6)`
+                  }
                   className="rounded-xl bg-emerald-600 px-5 py-2.5 text-sm font-bold text-white disabled:cursor-not-allowed disabled:opacity-50"
                 >
                   Hoàn thành PASS
