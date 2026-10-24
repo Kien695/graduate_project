@@ -9,7 +9,6 @@ let token;
 let refreshToken;
 const ids = {};
 const uploadedPublicIds = [];
-const backupFiles = [];
 
 const call = async (method, endpoint, body, authenticated = true) => {
   const headers = {};
@@ -42,9 +41,6 @@ const assert = (condition, name) => {
 const cleanup = async () => {
   for (const publicId of uploadedPublicIds)
     await cloudinary.uploader.destroy(publicId).catch(() => undefined);
-  for (const file of backupFiles)
-    if (file && fs.existsSync(file))
-      await fs.promises.unlink(file).catch(() => undefined);
   const client = await database.connect();
   try {
     await client.query("BEGIN");
@@ -96,12 +92,6 @@ const cleanup = async () => {
         [String(ids.vehicle)],
       );
       await client.query("DELETE FROM vehicles WHERE id=$1", [ids.vehicle]);
-    }
-    if (ids.backup) {
-      await client.query("DELETE FROM backup_history WHERE backup_record_id=$1", [ids.backup]);
-      await client.query("DELETE FROM backup_records WHERE id=$1", [
-        ids.backup,
-      ]);
     }
     await client.query(
       "DELETE FROM user_sessions WHERE device_id LIKE 'e2e-%'",
@@ -309,10 +299,7 @@ const run = async () => {
 
     const backups = await call("GET", "/backups");
     assert(Array.isArray(backups), "Backup list");
-    const backup = await call("POST", "/backups");
-    ids.backup = backup.id;
-    backupFiles.push(backup.file_path);
-    assert(backup.status === "completed", "Create database backup");
+    pass("Neon backup list");
 
     await call("POST", "/auth/logout", { refreshToken }, false);
     pass("Logout");

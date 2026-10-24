@@ -301,9 +301,12 @@ Người dùng không được đọc hợp đồng có `rank` cao hơn cấp b�
 | GET | `/api/backups/:id` | Admin | Chi tiết backup |
 | POST | `/api/backups/:id/restore` | Admin | Phục hồi backup |
 
-Máy chủ phải có `pg_dump` và `pg_restore`. Cấu hình đường dẫn bằng `PG_DUMP_PATH` và `PG_RESTORE_PATH` nếu các lệnh không nằm trong `PATH`.
+Backend dùng Neon Snapshot API; không cần cài PostgreSQL client. Cấu hình
+`NEON_API_KEY`, `NEON_PROJECT_ID`, `NEON_BRANCH_ID` và nên cấu hình
+`NEON_BRANCH_NAME`. Danh sách snapshot được đọc trực tiếp từ Neon.
 
-Restore là thao tác có thể thay đổi toàn bộ dữ liệu. Endpoint chỉ chấp nhận file thuộc thư mục backup của backend và đã có trạng thái `completed` trong `backup_records`.
+Restore thay toàn bộ dữ liệu và schema của branch đích. Endpoint yêu cầu
+`{ "confirm": true }`, chỉ dành cho admin và chỉ cho phép ghi đè root branch.
 
 ## 12. Monitoring
 
@@ -370,7 +373,7 @@ npm.cmd start               # Chạy bằng Node.js
 - `MAX_FAILED_LOGIN_ATTEMPTS`
 - `PROFILE_ENCRYPTION_KEY`
 - `CLOUD_NAME`, `CLOUD_KEY`, `CLOUD_SECRET`
-- `PG_DUMP_PATH`, `PG_RESTORE_PATH`
+- `NEON_API_KEY`, `NEON_PROJECT_ID`, `NEON_BRANCH_ID`, `NEON_BRANCH_NAME`
 - `ADMIN_EMAIL`, `ADMIN_PASSWORD`, `ADMIN_FULL_NAME`
 
 Không commit file `.env` lên Git. Chỉ commit `.env.example` và không đặt secret thật trong tài liệu này.

@@ -1,55 +1,45 @@
-# Sao lưu và phục hồi
+# Sao lưu và phục hồi bằng Neon Snapshot
 
-Admin mở **Sao lưu & phục hồi** (`/admin/backups`) để bật/tắt lịch hằng ngày,
-chọn giờ theo múi giờ máy chủ, số ngày lưu và xem lần chạy tiếp theo.
-Cấu hình lưu trong database; có hiệu lực ngay và được tải lại khi Backend khởi động.
-Nếu chưa lưu cấu hình, dùng AUTO_BACKUP_ENABLED, BACKUP_HOUR và BACKUP_RETENTION_DAYS
-trong môi trường (mặc định bật, 02:00, 30 ngày).
+Trang `/admin/backups` chỉ dành cho admin. Nút **Sao lưu ngay** gọi Neon API từ
+Backend để tạo snapshot của branch được cấu hình. API key không bao giờ được gửi
+cho trình duyệt. Snapshot được đặt thời điểm hết hạn theo `retention_days`.
 
-Backend phải chạy vào giờ đã chọn. Lịch trong tiến trình không chạy bù các lần
-máy chủ tắt. Bản sao thành công quá hạn được dọn sau lần sao lưu tự động thành công.
-Chỉ chạy một tiến trình lập lịch cho cùng database.
+## Cấu hình phía Backend
 
-## Phục hồi qua trang Admin
-
-1. Dừng thao tác ghi của người dùng; tạo bản sao hiện tại bằng **Sao lưu ngay**.
-2. Chọn bản sao thành công, kiểm tra tên và thời điểm tạo.
-3. Chọn **Phục hồi**, nhập `PHUC HOI` để xác nhận thay thế dữ liệu hiện tại.
-4. Chờ hoàn tất, đăng nhập lại và kiểm tra người dùng, hợp đồng và thanh toán.
-
-Phục hồi dùng một transaction: lỗi SQL sẽ rollback. Không gửi lại yêu cầu nếu mất
-kết nối khi đang chạy; kiểm tra trạng thái server trước. Phiên đăng nhập, cấu hình
-và nhãn bảo mật cũng trở về thời điểm sao lưu. File backup không chứa ảnh Cloudinary,
-file môi trường hoặc các khóa mã hóa; cần sao lưu các tài nguyên đó riêng, bảo vệ
-khóa mã hóa và giữ bản sao ngoài máy chủ để phòng hỏng ổ đĩa.
-
-Luồng phục hồi cần cả `pg_restore` và `psql` (có thể cấu hình `PSQL_PATH`). Bản sao
-cũ được chuyển thành SQL tạm; ba CHECK constraint category cũ được bỏ trước COPY
-để tương thích MAC bốn mức. Bản `.dump` gốc không thay đổi. File SQL tạm được xóa
-sau khi hoàn tất hoặc có lỗi. Với bản sao cũ chứa các CHECK này, ưu tiên luồng
-phục hồi trong ứng dụng; lệnh pg_restore trực tiếp bên dưới có thể gặp lỗi category.
-
-## Khi Backend hoặc database không hoạt động
-
-Trang quản trị cần database để đăng nhập nên không thay thế quy trình phục hồi ngoài
-ứng dụng. Quản trị viên cần khởi động PostgreSQL, tạo database đích nếu đã mất,
-và chạy công cụ PostgreSQL bằng tài khoản có quyền phù hợp. Chọn đúng host, port,
-tài khoản và database đích; giữ Backend dừng trong lúc phục hồi.
-
-Ví dụ trong terminal có `pg_restore` trong PATH (thay các giá trị trong dấu ngoặc):
-
-```text
-pg_restore --host=<host> --port=<port> --username=<user> --dbname=<database> --clean --if-exists --no-owner --single-transaction --exit-on-error <backup.dump>
+```env
+NEON_API_KEY=your_project_scoped_api_key
+NEON_PROJECT_ID=your-project-id
+NEON_BRANCH_ID=br-your-current-branch-id
+NEON_BRANCH_NAME=main
+NEON_API_TIMEOUT_MS=30000
+NEON_OPERATION_TIMEOUT_MS=120000
+NEON_MAX_APP_SNAPSHOTS=9
 ```
 
-Dùng cơ chế nhập mật khẩu hoặc cấu hình bí mật của PostgreSQL, không ghi mật khẩu
-vào lệnh. Khôi phục cấu hình và khóa mã hóa đúng thời điểm, chạy migration nếu bản
-sao cũ hơn phiên bản ứng dụng, rồi khởi động Backend và kiểm tra dữ liệu.
+`NEON_BRANCH_NAME` được khuyến nghị. Backend tra ID hiện tại theo tên trước mỗi
+thao tác vì ID phía sau branch có thể thay đổi sau restore. `NEON_BRANCH_ID` là
+giá trị dự phòng khi không khai báo tên.
 
-## Kiểm chứng
+Nên dùng project-scoped API key có quyền trên đúng project. Không ghi key vào
+frontend, source control hoặc log. Snapshot cần gói Neon hỗ trợ tính năng này.
+Ứng dụng giữ tối đa `NEON_MAX_APP_SNAPSHOTS` snapshot có tiền tố `autodealer-`.
+Khi chạm giới hạn, snapshot cũ nhất do ứng dụng tạo sẽ bị xóa trước; snapshot tạo
+thủ công trong Neon Console không bị ứng dụng tự xóa.
 
-`node scripts/testBackupRestore.js` tạo database tạm có tên `backup_test_<timestamp>`,
-kiểm tra cấu hình/lịch và sao lưu–phục hồi bằng pg_dump/pg_restore thật, sau đó xóa
-database tạm. Tài khoản kiểm thử cần quyền tạo database. Không phục hồi vào database
-đang dùng. Thời gian phục hồi thực tế phụ thuộc kích thước dữ liệu và cần đo định kỳ;
-lịch mỗi ngày có thể mất tối đa khoảng một ngày dữ liệu nếu các lần chạy đều thành công.
+## Phục hồi
+
+Danh sách được đọc trực tiếp từ Neon, không đọc file `.dump`. Khi admin chọn một
+snapshot, giao diện hiển thị tên/ID branch đích và yêu cầu nhập `PHUC HOI`.
+Backend chỉ cho phép ghi đè root branch, gọi restore với `finalize_restore=true`
+và chờ các operation của Neon hoàn tất. Backend không gửi lại tên branch đích làm
+tên branch trung gian; Neon tự sinh tên duy nhất để tránh xung đột. Người dùng bị
+đăng xuất sau thành công.
+
+Restore thay cả dữ liệu lẫn schema và làm mất các thay đổi sau thời điểm snapshot.
+Nó không phục hồi ảnh Cloudinary, biến môi trường hay secret. Nếu database đang
+không hoạt động khiến admin không thể đăng nhập, thực hiện restore trong Neon
+Console. Không gửi lại yêu cầu tạo/restore khi gặp timeout: POST có thể đã tới
+Neon; trước tiên hãy tải lại danh sách hoặc kiểm tra Neon Console.
+
+Lịch tự động vẫn do tiến trình Backend chạy. Backend phải hoạt động đúng giờ; nếu
+không có snapshot do ứng dụng tạo trong 24 giờ, cơ chế catch-up sẽ tạo một bản.

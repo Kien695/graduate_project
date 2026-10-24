@@ -1,6 +1,5 @@
 const backup = require("./backup.service");
 const settings = require("./backupSettings.service");
-const { database } = require("../database/database");
 let timer;
 let generation = 0;
 let nextRun = null;
@@ -41,11 +40,9 @@ const catchUp = async () => {
   try {
     const config = await settings.get();
     if (!config.enabled) return;
-    const { rows } = await database.query(
-      `SELECT 1 FROM public.backup_records
-       WHERE status='completed' AND created_at > NOW() - INTERVAL '24 hours' LIMIT 1`,
-    );
-    if (rows[0]) return;
+    const snapshots = await backup.list();
+    if (snapshots.some((item) => item.file_name?.startsWith("autodealer-") &&
+      new Date(item.created_at).getTime() > Date.now() - 86400000)) return;
     console.log("Không có bản sao lưu trong 24 giờ qua, chạy bù ngay");
     await backup.create(null);
     await backup.enforceRetention();

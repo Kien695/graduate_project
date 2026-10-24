@@ -75,7 +75,7 @@ export default function BackupPage() {
       <div>
         <h1 className="text-2xl font-bold">Sao lưu & phục hồi</h1>
         <p className="mt-1 text-sm text-slate-500">
-          Quản lý lịch sao lưu và khôi phục database khi xảy ra sự cố.
+          Quản lý Neon Snapshot và khôi phục database khi xảy ra sự cố.
         </p>
       </div>
       {error && (
@@ -148,8 +148,8 @@ export default function BackupPage() {
             </div>
             <p className="text-sm text-slate-500">
               Lần chạy đã lên lịch: {date(settings.next_run)}. Backend cần hoạt
-              động vào giờ này. Bản sao được lưu trên máy chủ; ảnh lưu trên
-              Cloudinary không nằm trong bản sao database.
+              động vào giờ này. Snapshot được Neon lưu và tự hết hạn theo số
+              ngày cấu hình; ảnh trên Cloudinary không nằm trong snapshot database.
             </p>
             <button className={button} disabled={busy}>
               Lưu lịch
@@ -191,7 +191,7 @@ export default function BackupPage() {
                 {[
                   "Tên bản sao",
                   "Ngày tạo",
-                  "Dung lượng",
+                  "Hết hạn",
                   "Trạng thái",
                   "Thao tác",
                 ].map((x) => (
@@ -205,9 +205,7 @@ export default function BackupPage() {
                   <td>{r.file_name}</td>
                   <td>{date(r.created_at)}</td>
                   <td>
-                    {r.size_bytes
-                      ? `${(Number(r.size_bytes) / 1024 / 1024).toFixed(2)} MB`
-                      : "—"}
+                    {date(r.expires_at)}
                   </td>
                   <td>{status[r.status] || r.status}</td>
                   <td>
@@ -268,10 +266,14 @@ export default function BackupPage() {
               <strong className="break-all">{selected.file_name}</strong> (
               {date(selected.created_at)}).
             </p>
+            <p>
+              Branch đích: <strong>{selected.target_branch_name}</strong>{" "}
+              <span className="break-all text-slate-500">({selected.target_branch_id})</span>.
+            </p>
             <p className="text-red-600">
-              Dữ liệu hiện tại sẽ bị thay thế bằng dữ liệu tại thời điểm sao
-              lưu. Các thay đổi sau thời điểm đó sẽ mất. Hãy dừng thao tác của
-              người dùng và tạo bản sao mới trước khi tiếp tục.
+              Neon sẽ ghi đè toàn bộ dữ liệu và schema hiện tại của branch đích
+              bằng snapshot đã chọn. Các thay đổi sau thời điểm đó sẽ mất. Hãy
+              dừng thao tác của người dùng và tạo snapshot mới trước khi tiếp tục.
             </p>
             <label className="block">
               Nhập PHUC HOI để xác nhận

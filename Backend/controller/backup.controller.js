@@ -17,7 +17,7 @@ const history = catchAsyncError(async (req, res) =>
   successResponse(res, 200, "Lấy lịch sử backup thành công", await s.history()),
 );
 const create = catchAsyncError(async (req, res) =>
-  successResponse(res, 201, "Backup thành công", await s.create(req.user.id)),
+  successResponse(res, 201, "Backup thành công", await s.create(req.user.id, req.ip)),
 );
 const restore = catchAsyncError(async (req, res) => {
   if (req.body.confirm !== true)

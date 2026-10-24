@@ -25,10 +25,15 @@ DB_NAME=graduate_project
 DB_PASSWORD=060905
 DB_PORT=5432
 
-# PostgreSQL backup tools
+# Neon native backup/restore (server-side only)
 
-PG_DUMP_PATH=pg_dump
-PG_RESTORE_PATH=pg_restore
+NEON_API_KEY=replace_with_project_scoped_api_key
+NEON_PROJECT_ID=replace_with_neon_project_id
+NEON_BRANCH_ID=replace_with_current_branch_id
+NEON_BRANCH_NAME=main
+NEON_API_TIMEOUT_MS=30000
+NEON_OPERATION_TIMEOUT_MS=120000
+NEON_MAX_APP_SNAPSHOTS=9
 
 # Initial administrator
 
