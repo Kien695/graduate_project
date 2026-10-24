@@ -1,8 +1,12 @@
 const jwt = require("jsonwebtoken");
 const crypto = require("crypto");
-const { database, systemDatabase, withTransaction, withSystemTransaction } = require("../database/database");
+const { database, systemDatabase, withSystemTransaction } = require("../database/database");
 const { ErrorHandler } = require("../middleware/errorMiddleware");
-const { verifyPassword, hashPassword } = require("../utils/password");
+const {
+  verifyPassword,
+  hashPassword,
+  databasePasswordErrors,
+} = require("../utils/password");
 const { hashToken } = require("../utils/token");
 const { generateAccessToken } = require("../utils/generatAccessToken");
 const { generateRefreshToken } = require("../utils/generateRefreshToken");
@@ -18,6 +22,27 @@ const {
 const MAX_FAILURES = Number(process.env.MAX_FAILED_LOGIN_ATTEMPTS || 5);
 const LOCK_MINUTES = Number(process.env.ACCOUNT_LOCK_MINUTES || 30);
 
+const customerDatabaseUsername = (email) => {
+  const localPart = String(email || "").trim().toLowerCase().split("@")[0];
+  const normalized = localPart
+    .normalize("NFKD")
+    .replace(/[\u0300-\u036f]/g, "")
+    .replace(/[^a-z0-9_]+/g, "_")
+    .replace(/_+/g, "_")
+    .replace(/^_+|_+$/g, "");
+  const prefixed = /^[a-z_]/.test(normalized)
+    ? normalized
+    : `customer_${normalized}`;
+  const result = prefixed.slice(0, 63).replace(/_+$/g, "");
+  if (!/^[a-z_][a-z0-9_]{0,62}$/.test(result))
+    throw new ErrorHandler(
+      "Không thể tạo tên PostgreSQL hợp lệ từ phần trước @ của email",
+      400,
+      [{ field: "email", message: "Phần trước @ không tạo được tên PostgreSQL hợp lệ" }],
+    );
+  return result;
+};
+
 const normalizeDeviceType = (deviceType, userAgent = "") => {
   const requested = String(deviceType || "")
     .trim()
@@ -27,12 +52,26 @@ const normalizeDeviceType = (deviceType, userAgent = "") => {
 };
 
 const registerCustomer = async (input) => {
+  const email = String(input.email || "").trim().toLowerCase();
+  if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email))
+    throw new ErrorHandler("Email không hợp lệ", 400, [
+      { field: "email", message: "Email không đúng định dạng" },
+    ]);
+  const passwordRequirements = databasePasswordErrors(input.password);
+  if (passwordRequirements.length)
+    throw new ErrorHandler("Mật khẩu chưa đủ mạnh", 400, [
+      {
+        field: "password",
+        message: `Mật khẩu phải có ${passwordRequirements.join(", ")}`,
+      },
+    ]);
+  const dbUsername = customerDatabaseUsername(email);
   try {
-    return await withTransaction(async (client) => {
+    return await withSystemTransaction(async (client) => {
       const existing = await client.query(
-        `SELECT id FROM users
+        `SELECT id FROM public.users
          WHERE email_lookup_hash=$1 OR LOWER(email)=LOWER($2) LIMIT 1`,
-        [emailLookupHash(input.email), input.email],
+        [emailLookupHash(email), email],
       );
       if (existing.rows[0])
         throw new ErrorHandler("Email đã tồn tại", 409, [
@@ -41,7 +80,7 @@ const registerCustomer = async (input) => {
 
       const phoneHash = phoneLookupHash(input.phone);
       const existingPhone = await client.query(
-        "SELECT id FROM users WHERE phone_lookup_hash=$1 LIMIT 1",
+        "SELECT id FROM public.users WHERE phone_lookup_hash=$1 LIMIT 1",
         [phoneHash],
       );
       if (existingPhone.rows[0])
@@ -49,15 +88,36 @@ const registerCustomer = async (input) => {
           { field: "phone", message: "Số điện thoại đã tồn tại!" },
         ]);
 
+      const existingDbUser = await client.query(
+        "SELECT id FROM public.users WHERE LOWER(db_user)=LOWER($1) LIMIT 1",
+        [dbUsername],
+      );
+      if (existingDbUser.rows[0])
+        throw new ErrorHandler(
+          "Tên PostgreSQL đã được tài khoản khác sử dụng",
+          409,
+          [{ field: "email", message: "Phần trước @ bị trùng với tài khoản PostgreSQL đã có" }],
+        );
+      const existingRole = await client.query(
+        "SELECT 1 FROM pg_roles WHERE rolname=$1",
+        [dbUsername],
+      );
+      if (existingRole.rows[0])
+        throw new ErrorHandler("Tên role PostgreSQL đã tồn tại", 409, [
+          { field: "email", message: "Phần trước @ đã được dùng làm role PostgreSQL" },
+        ]);
+
       const passwordHash = await hashPassword(input.password);
-      const encryptedEmail = encryptProfileValue(input.email);
+      const encryptedEmail = encryptProfileValue(email);
       const encryptedPhone = encryptProfileValue(input.phone);
-      const lookupHash = emailLookupHash(input.email);
+      const lookupHash = emailLookupHash(email);
       const { rows } = await client.query(
-        `INSERT INTO users(
+        `INSERT INTO public.users(
            username,password_hash,role,email,phone,email_encrypted,phone_encrypted,
-           email_lookup_hash,phone_lookup_hash,full_name,status,is_active,is_locked,failed_login_attempts,security_level_id
-         ) VALUES($1,$2,'CUSTOMER',NULL,NULL,$3,$4,$5,$6,$7,'ACTIVE',TRUE,FALSE,0,(SELECT id FROM security_levels WHERE name='PUBLIC'))
+           email_lookup_hash,phone_lookup_hash,full_name,status,is_active,is_locked,
+           failed_login_attempts,security_level_id,db_user
+         ) VALUES($1,$2,'CUSTOMER',NULL,NULL,$3,$4,$5,$6,$7,'ACTIVE',TRUE,FALSE,0,
+           (SELECT id FROM public.security_levels WHERE name='PUBLIC'),$8)
          RETURNING id`,
         [
           `customer-${crypto.randomUUID()}`,
@@ -67,22 +127,33 @@ const registerCustomer = async (input) => {
           lookupHash,
           phoneHash,
           input.name,
+          dbUsername,
         ],
       );
+      await client.query(
+        `CREATE ROLE ${quoteIdentifier(dbUsername)} LOGIN NOSUPERUSER NOCREATEDB NOCREATEROLE NOINHERIT NOBYPASSRLS PASSWORD ${client.escapeLiteral(input.password)}`,
+      );
+      await client.query(`GRANT USAGE ON SCHEMA public TO ${quoteIdentifier(dbUsername)}`);
+      await client.query(
+        `GRANT SELECT ON TABLE public.vehicles,public.accessories,public.users,
+           public.customers,public.orders,public.contracts,public.accessory_orders,
+           public.inspections,public.security_levels TO ${quoteIdentifier(dbUsername)}`,
+      );
       const customer = await client.query(
-        `INSERT INTO customers(
+        `INSERT INTO public.customers(
            user_id,full_name,email,phone,email_encrypted,phone_encrypted,is_active
          ) VALUES($1,$2,NULL,NULL,$3,$4,TRUE) RETURNING id`,
         [rows[0].id, input.name, encryptedEmail, encryptedPhone],
       );
       await client.query(
-        `INSERT INTO customer_storage(customer_id,quota_mb,used_mb)
+        `INSERT INTO public.customer_storage(customer_id,quota_mb,used_mb)
          VALUES($1,$2,0) ON CONFLICT(customer_id) DO NOTHING`,
         [
           customer.rows[0].id,
           Number(process.env.CUSTOMER_STORAGE_QUOTA_MB || 500),
         ],
       );
+      return { id: rows[0].id };
     });
   } catch (error) {
     if (error.code === "23505") {
@@ -90,10 +161,32 @@ const registerCustomer = async (input) => {
         throw new ErrorHandler("Số điện thoại đã tồn tại!", 409, [
           { field: "phone", message: "Số điện thoại đã tồn tại!" },
         ]);
+      if (String(error.constraint).includes("db_user"))
+        throw new ErrorHandler(
+          "Tên PostgreSQL đã được tài khoản khác sử dụng",
+          409,
+          [{ field: "email", message: "Phần trước @ bị trùng với tài khoản PostgreSQL đã có" }],
+        );
       throw new ErrorHandler("Email đã tồn tại", 409, [
         { field: "email", message: "Email này đã được sử dụng" },
       ]);
     }
+    if (error.code === "42710")
+      throw new ErrorHandler("Tên role PostgreSQL đã tồn tại", 409, [
+        { field: "email", message: "Phần trước @ đã được dùng làm role PostgreSQL" },
+      ]);
+    if (error.code === "42501")
+      throw new ErrorHandler(
+        "Hệ thống chưa được cấp quyền tạo tài khoản PostgreSQL cho khách hàng",
+        503,
+      );
+    if (/insecure password|password.*(weak|strength|complex|must|at least)/i.test(String(error.message || "")))
+      throw new ErrorHandler("Mật khẩu chưa đáp ứng chính sách bảo mật của PostgreSQL", 400, [
+        {
+          field: "password",
+          message: "Hãy dùng mật khẩu dài hơn và kết hợp chữ hoa, chữ thường, chữ số, ký tự đặc biệt",
+        },
+      ]);
     throw error;
   }
 };
@@ -198,13 +291,15 @@ const login = async (input) => {
       loginError.commitTransaction = true;
       throw loginError;
     }
-    if (user.role === "staff") {
-      if (!user.db_user)
+    if (["staff", "customer"].includes(user.role)) {
+      if (user.role === "staff" && !user.db_user)
         throw new ErrorHandler("Tài khoản chưa được liên kết role PostgreSQL; liên hệ quản trị viên để đặt lại mật khẩu", 409);
-      try {
-        pendingPool = await databaseSessions.createVerifiedPool(user.db_user, input.password);
-      } catch (_) {
-        throw new ErrorHandler("Không thể xác thực tài khoản PostgreSQL", 401);
+      if (user.db_user) {
+        try {
+          pendingPool = await databaseSessions.createVerifiedPool(user.db_user, input.password);
+        } catch (_) {
+          throw new ErrorHandler("Không thể xác thực tài khoản PostgreSQL", 401);
+        }
       }
     }
     if (user.role === "customer") {
@@ -340,7 +435,11 @@ const refresh = async (token) => {
   });
   if (!user || user.is_locked || !user.is_active)
     throw new ErrorHandler("Phiên đăng nhập không còn hiệu lực", 401);
-  if (String(user.role).toLowerCase() === "staff" && !databaseSessions.get(payload.sessionId))
+  if (
+    ["staff", "customer"].includes(String(user.role).toLowerCase()) &&
+    user.db_user &&
+    !databaseSessions.get(payload.sessionId)
+  )
     throw new ErrorHandler("Phiên cơ sở dữ liệu đã mất, vui lòng đăng nhập lại", 401);
   return { accessToken: generateAccessToken(user, payload.sessionId) };
 };
@@ -363,7 +462,8 @@ const logoutAll = async (userId) => {
 const changePassword = (userId, currentPassword, newPassword) =>
   withSystemTransaction(async (client) => {
     const { rows } = await client.query(
-      "SELECT password_hash,db_user,role FROM users WHERE id=$1 FOR UPDATE",
+      `SELECT password_hash,db_user,role,email,email_encrypted
+       FROM users WHERE id=$1 FOR UPDATE`,
       [userId],
     );
     if (
@@ -373,14 +473,45 @@ const changePassword = (userId, currentPassword, newPassword) =>
       throw new ErrorHandler("Mật khẩu hiện tại không đúng", 400);
     if (await verifyPassword(newPassword, rows[0].password_hash))
       throw new ErrorHandler("Mật khẩu mới phải khác mật khẩu hiện tại", 400);
-    if (String(rows[0].role).toLowerCase() === "staff") {
+    const role = String(rows[0].role).toLowerCase();
+    if (role === "staff") {
       if (!rows[0].db_user)
         throw new ErrorHandler("Nhân viên cũ cần quản trị viên liên kết role PostgreSQL trước", 409);
       await client.query(`ALTER ROLE ${quoteIdentifier(rows[0].db_user)} PASSWORD ${client.escapeLiteral(newPassword)}`);
+    } else if (role === "customer") {
+      let dbUsername = rows[0].db_user;
+      if (!dbUsername) {
+        const email =
+          decryptProfileValue(rows[0].email_encrypted) || rows[0].email;
+        dbUsername = customerDatabaseUsername(email);
+        const exists = await client.query(
+          `SELECT EXISTS(SELECT 1 FROM pg_roles WHERE rolname=$1) role_exists,
+             EXISTS(SELECT 1 FROM public.users WHERE LOWER(db_user)=LOWER($1) AND id<>$2) user_exists`,
+          [dbUsername, userId],
+        );
+        if (exists.rows[0].role_exists || exists.rows[0].user_exists)
+          throw new ErrorHandler(
+            "Không thể tạo role PostgreSQL vì phần trước @ đã được sử dụng",
+            409,
+          );
+        await client.query(
+          `CREATE ROLE ${quoteIdentifier(dbUsername)} LOGIN NOSUPERUSER NOCREATEDB NOCREATEROLE NOINHERIT NOBYPASSRLS PASSWORD ${client.escapeLiteral(newPassword)}`,
+        );
+        await client.query(`GRANT USAGE ON SCHEMA public TO ${quoteIdentifier(dbUsername)}`);
+        await client.query(
+          `GRANT SELECT ON TABLE public.vehicles,public.accessories,public.users,
+             public.customers,public.orders,public.contracts,public.accessory_orders,
+             public.inspections,public.security_levels TO ${quoteIdentifier(dbUsername)}`,
+        );
+      } else {
+        await client.query(`ALTER ROLE ${quoteIdentifier(dbUsername)} PASSWORD ${client.escapeLiteral(newPassword)}`);
+      }
+      rows[0].db_user = dbUsername;
     }
     await client.query(
-      "UPDATE users SET password_hash=$2,password_changed_at=NOW(),updated_at=NOW() WHERE id=$1",
-      [userId, await hashPassword(newPassword)],
+      `UPDATE users SET password_hash=$2,db_user=COALESCE(db_user,$3),
+         password_changed_at=NOW(),updated_at=NOW() WHERE id=$1`,
+      [userId, await hashPassword(newPassword), rows[0].db_user || null],
     );
     const sessions = await client.query(
       "UPDATE user_sessions SET revoked_at=NOW() WHERE user_id=$1 AND revoked_at IS NULL RETURNING id",

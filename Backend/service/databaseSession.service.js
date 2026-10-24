@@ -10,10 +10,13 @@ const SESSION_IDLE_MS = Math.max(60000, Number(process.env.SESSION_IDLE_TIMEOUT_
 const poolConfig = (dbUser, rawPassword) => ({
   user: dbUser,
   password: rawPassword,
-  host: process.env.DB_HOST,
+  host:
+    process.env.DB_SESSION_HOST ||
+    String(process.env.DB_HOST || "").replace("-pooler.", "."),
   database: process.env.DB_NAME,
   port: Number(process.env.DB_PORT),
   ssl: process.env.DB_SSL === "true" ? { rejectUnauthorized: false } : false,
+  options: "-c search_path=public",
   max: Math.max(1, Number(process.env.DB_SESSION_POOL_SIZE || 3)),
   idleTimeoutMillis: Math.max(1000, Number(process.env.DB_SESSION_IDLE_MS || 300000)),
   connectionTimeoutMillis: Math.max(1000, Number(process.env.DB_SESSION_CONNECT_TIMEOUT_MS || 10000)),

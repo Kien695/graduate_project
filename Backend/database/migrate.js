@@ -26,6 +26,9 @@ const migrate = async () => {
     await database.query(fs.readFileSync(
       path.join(__dirname, "migrations", "20261005_accessory_orders.sql"), "utf8",
     ));
+    await database.query(fs.readFileSync(
+      path.join(__dirname, "migrations", "20261024_customer_database_roles.sql"), "utf8",
+    ));
   } finally {
     await database.end();
   }

@@ -26,19 +26,19 @@ const resolvePostgresTool = (configured, executable) => {
 };
 const list = async () => {
   const { rows } = await database.query(
-    "SELECT * FROM backup_records ORDER BY created_at DESC",
+    "SELECT * FROM public.backup_records ORDER BY created_at DESC",
   );
   return rows;
 };
 const history = async () => {
   const { rows } = await database.query(
-    "SELECT * FROM backup_history ORDER BY created_at DESC",
+    "SELECT * FROM public.backup_history ORDER BY created_at DESC",
   );
   return rows;
 };
 const get = async (id) => {
   const { rows } = await database.query(
-    "SELECT * FROM backup_records WHERE id=$1",
+    "SELECT * FROM public.backup_records WHERE id=$1",
     [id],
   );
   if (!rows[0]) throw new ErrorHandler("Không tìm thấy bản backup", 404);
@@ -49,11 +49,11 @@ const create = async (userId) => {
   const fileName = `backup-${new Date().toISOString().replace(/[:.]/g, "-")}.dump`;
   const filePath = path.join(dir, fileName);
   const inserted = await database.query(
-    "INSERT INTO backup_records(file_name,file_path,status,created_by) VALUES($1,$2,'processing',$3) RETURNING *",
+    "INSERT INTO public.backup_records(file_name,file_path,status,created_by) VALUES($1,$2,'processing',$3) RETURNING *",
     [fileName, filePath, userId],
   );
   const historyRecord = await database.query(
-    `INSERT INTO backup_history(backup_record_id,file_name,status)
+    `INSERT INTO public.backup_history(backup_record_id,file_name,status)
      VALUES($1,$2,'processing') RETURNING id`,
     [inserted.rows[0].id, fileName],
   );
@@ -79,11 +79,11 @@ const create = async (userId) => {
     );
     const stat = await fs.promises.stat(filePath);
     const { rows } = await database.query(
-      "UPDATE backup_records SET status='completed',size_bytes=$2 WHERE id=$1 RETURNING *",
+      "UPDATE public.backup_records SET status='completed',size_bytes=$2 WHERE id=$1 RETURNING *",
       [inserted.rows[0].id, stat.size],
     );
     await database.query(
-      `UPDATE backup_history SET status='completed',size=$2,completed_at=NOW()
+      `UPDATE public.backup_history SET status='completed',size=$2,completed_at=NOW()
        WHERE id=$1`,
       [historyRecord.rows[0].id, stat.size],
     );
@@ -110,11 +110,11 @@ const create = async (userId) => {
     return rows[0];
   } catch (error) {
     await database.query(
-      "UPDATE backup_records SET status='failed' WHERE id=$1",
+      "UPDATE public.backup_records SET status='failed' WHERE id=$1",
       [inserted.rows[0].id],
     );
     await database.query(
-      "UPDATE backup_history SET status='failed',completed_at=NOW() WHERE id=$1",
+      "UPDATE public.backup_history SET status='failed',completed_at=NOW() WHERE id=$1",
       [historyRecord.rows[0].id],
     );
     throw new ErrorHandler(`Backup thất bại: ${error.message}`, 500);
@@ -145,11 +145,11 @@ const restore = async (id, userId, ipAddress) => {
     });
     // The dump captures its own backup record while still processing.
     await database.query(
-      "UPDATE backup_records SET status='completed',size_bytes=$2 WHERE id=$1",
+      "UPDATE public.backup_records SET status='completed',size_bytes=$2 WHERE id=$1",
       [id, backup.size_bytes],
     );
     await database.query(
-      "UPDATE backup_history SET status='completed',size=$2,completed_at=NOW() WHERE backup_record_id=$1",
+      "UPDATE public.backup_history SET status='completed',size=$2,completed_at=NOW() WHERE backup_record_id=$1",
       [id, backup.size_bytes],
     );
     const actor = userId
@@ -178,7 +178,7 @@ const enforceRetention = async () => {
     (await require("./backupSettings.service").get()).retention_days,
   );
   const { rows } = await database.query(
-    `SELECT * FROM backup_records
+    `SELECT * FROM public.backup_records
      WHERE status='completed' AND created_at<NOW()-($1*INTERVAL '1 day')`,
     [retentionDays],
   );
@@ -192,10 +192,10 @@ const enforceRetention = async () => {
       path.join(process.env.BACKUP_OFFSITE_DIR, path.basename(resolved));
     if (offsite && fs.existsSync(offsite)) await fs.promises.unlink(offsite);
     await database.query(
-      "UPDATE backup_history SET status='expired' WHERE backup_record_id=$1",
+      "UPDATE public.backup_history SET status='expired' WHERE backup_record_id=$1",
       [record.id],
     );
-    await database.query("DELETE FROM backup_records WHERE id=$1", [record.id]);
+    await database.query("DELETE FROM public.backup_records WHERE id=$1", [record.id]);
     removed += 1;
   }
   return { retentionDays, removed };

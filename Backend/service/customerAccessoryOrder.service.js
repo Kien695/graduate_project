@@ -1,8 +1,8 @@
-const { database, withTransaction } = require("../database/database");
+const { database, withSystemTransaction } = require("../database/database");
 const { ErrorHandler } = require("../middleware/errorMiddleware");
 
 const create = (accessoryId, quantity, userId) =>
-  withTransaction(async (client) => {
+  withSystemTransaction(async (client) => {
     const customerResult = await client.query(
       "SELECT id FROM customers WHERE user_id=$1 AND is_active IS DISTINCT FROM FALSE",
       [userId],
@@ -91,7 +91,7 @@ const get = async (id, userId) => {
 };
 
 const cancel = (id, userId) =>
-  withTransaction(async (client) => {
+  withSystemTransaction(async (client) => {
     const owned = await client.query(
       `SELECT ao.id,ao.accessory_id,ao.quantity FROM accessory_orders ao
        JOIN customers c ON c.id=ao.customer_id

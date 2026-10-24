@@ -10,7 +10,7 @@ const touch = async ({ sessionId, userId, refreshTokenHash }) => {
   let idleExpired = false;
   const user = await withTransaction(async (client) => {
     const { rows } = await client.query(
-      `SELECT u.id,u.email,u.full_name,u.role,u.security_level_id,
+      `SELECT u.id,u.email,u.full_name,u.role,u.security_level_id,u.db_user,
          u.is_locked,u.is_active,s.id session_id,s.device_id,s.device_type,
          s.refresh_token_hash,s.last_activity_at,s.created_at,s.expires_at,s.revoked_at
        FROM user_sessions s JOIN users u ON u.id=s.user_id

@@ -9,7 +9,7 @@ const defaults = () => ({
 });
 const get = async () => {
   const { rows } = await database.query(
-    "SELECT enabled,hour,retention_days FROM backup_settings WHERE id=1",
+    "SELECT enabled,hour,retention_days FROM public.backup_settings WHERE id=1",
   );
   return {
     ...(rows[0] || defaults()),
@@ -33,10 +33,10 @@ const save = async (input, actor, ipAddress) => {
     );
   await withTransaction(async (client) => {
     const old = await client.query(
-      "SELECT * FROM backup_settings WHERE id=1 FOR UPDATE",
+      "SELECT * FROM public.backup_settings WHERE id=1 FOR UPDATE",
     );
     await client.query(
-      `INSERT INTO backup_settings(id,enabled,hour,retention_days) VALUES(1,$1,$2,$3)
+      `INSERT INTO public.backup_settings(id,enabled,hour,retention_days) VALUES(1,$1,$2,$3)
       ON CONFLICT(id) DO UPDATE SET enabled=$1,hour=$2,retention_days=$3,updated_at=NOW()`,
       [enabled, hour, days],
     );

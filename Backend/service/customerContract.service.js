@@ -1,4 +1,4 @@
-const { database, withTransaction } = require("../database/database");
+const { database, withSystemTransaction } = require("../database/database");
 const { ErrorHandler } = require("../middleware/errorMiddleware");
 const auditLog = require("./auditLog.service");
 const { decryptProfileValue } = require("../utils/profileEncryption");
@@ -63,7 +63,7 @@ const get = async (id, userId, executor = database) => {
 };
 
 const confirm = (id, userId, ipAddress) =>
-  withTransaction(async (client) => {
+  withSystemTransaction(async (client) => {
     const current = await client.query(
       `SELECT c.*
        FROM contracts c

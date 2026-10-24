@@ -25,7 +25,7 @@ const ErrorMiddleware = (err, req, res, next) => {
     statusCode = 403;
     message = "Bạn không có quyền thực hiện thao tác này";
   }
-  if (/password.*(weak|strength|complex|must|at least)/i.test(String(err.message || ""))) {
+  if (/insecure password|password.*(weak|strength|complex|must|at least)/i.test(String(err.message || ""))) {
     statusCode = 400;
     message = "Mật khẩu PostgreSQL quá yếu, vui lòng đặt mật khẩu mạnh hơn";
   }

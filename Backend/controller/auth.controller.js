@@ -2,6 +2,7 @@ const authService = require("../service/auth.service");
 const { catchAsyncError } = require("../middleware/catchAsyncError");
 const { ErrorHandler } = require("../middleware/errorMiddleware");
 const { successResponse } = require("../utils/response");
+const { databasePasswordErrors } = require("../utils/password");
 
 const refreshCookieOptions = () => ({
   httpOnly: true,
@@ -64,8 +65,14 @@ const registerCustomer = catchAsyncError(async (req, res) => {
       "Số điện thoại phải có 10 số, bắt đầu bằng 03, 05, 07, 08 hoặc 09",
     );
   if (!password) addError("password", "Mật khẩu không được để trống");
-  else if (String(password).length < 6)
-    addError("password", "Mật khẩu phải có ít nhất 6 ký tự");
+  else {
+    const requirements = databasePasswordErrors(password);
+    if (requirements.length)
+      addError(
+        "password",
+        `Mật khẩu phải có ${requirements.join(", ")}`,
+      );
+  }
   if (!confirmPassword)
     addError("confirmPassword", "Vui lòng nhập lại mật khẩu");
   else if (password !== confirmPassword)
@@ -103,8 +110,12 @@ const logoutAll = catchAsyncError(async (req, res) => {
 });
 const changePassword = catchAsyncError(async (req, res) => {
   requireFields(req.body, ["currentPassword", "newPassword"]);
-  if (req.body.newPassword.length < 8)
-    throw new ErrorHandler("Mật khẩu mới phải có ít nhất 8 ký tự", 400);
+  const passwordRequirements = databasePasswordErrors(req.body.newPassword);
+  if (passwordRequirements.length)
+    throw new ErrorHandler(
+      `Mật khẩu mới phải có ${passwordRequirements.join(", ")}`,
+      400,
+    );
   await authService.changePassword(
     req.user.id,
     req.body.currentPassword,

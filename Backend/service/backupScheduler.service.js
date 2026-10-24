@@ -42,7 +42,7 @@ const catchUp = async () => {
     const config = await settings.get();
     if (!config.enabled) return;
     const { rows } = await database.query(
-      `SELECT 1 FROM backup_records
+      `SELECT 1 FROM public.backup_records
        WHERE status='completed' AND created_at > NOW() - INTERVAL '24 hours' LIMIT 1`,
     );
     if (rows[0]) return;

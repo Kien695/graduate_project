@@ -5,6 +5,15 @@ const sessionActivity = require("../service/sessionActivity.service");
 const databaseSessions = require("../service/databaseSession.service");
 const { runWithDatabase } = require("../database/database");
 
+const customerDatabaseRoutes = new Set([
+  "/api/vehicles",
+  "/api/accessories",
+  "/api/customers",
+  "/api/customer/orders",
+  "/api/customer/accessory-orders",
+  "/api/customer/contracts",
+]);
+
 const auth = catchAsyncError(async (req, res, next) => {
   const token = req.headers.authorization?.startsWith("Bearer ")
     ? req.headers.authorization.slice(7)
@@ -37,7 +46,9 @@ const auth = catchAsyncError(async (req, res, next) => {
     return next(new ErrorHandler("Tai khoan khong kha dung", 401));
   req.user = user;
   req.user.role = req.user.role?.toLowerCase();
-  if (req.user.role === "staff") {
+  const useCustomerDatabase =
+    req.user.role === "customer" && customerDatabaseRoutes.has(req.baseUrl);
+  if (req.user.role === "staff" || useCustomerDatabase) {
     const pool = databaseSessions.get(decoded.sessionId);
     if (!pool)
       return next(new ErrorHandler("Phiên cơ sở dữ liệu đã mất, vui lòng đăng nhập lại", 401));

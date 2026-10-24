@@ -1,8 +1,8 @@
-const { database, withTransaction } = require("../database/database");
+const { database, withSystemTransaction } = require("../database/database");
 const { ErrorHandler } = require("../middleware/errorMiddleware");
 
 const create = (vehicleId, userId) =>
-  withTransaction(async (client) => {
+  withSystemTransaction(async (client) => {
     const customerResult = await client.query(
       "SELECT id FROM customers WHERE user_id=$1 AND is_active IS DISTINCT FROM FALSE",
       [userId],

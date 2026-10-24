@@ -45,6 +45,16 @@ const connectDB = async () => {
         "utf8",
       ),
     );
+    await database.query(
+      fs.readFileSync(
+        path.join(
+          __dirname,
+          "migrations",
+          "20261024_customer_database_roles.sql",
+        ),
+        "utf8",
+      ),
+    );
     console.log("Connected to PostgreSQL!");
   } catch (err) {
     console.error(err);
