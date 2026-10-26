@@ -47,7 +47,9 @@ const auth = catchAsyncError(async (req, res, next) => {
   req.user = user;
   req.user.role = req.user.role?.toLowerCase();
   const useCustomerDatabase =
-    req.user.role === "customer" && customerDatabaseRoutes.has(req.baseUrl);
+    req.user.role === "customer" &&
+    Boolean(req.user.db_user) &&
+    customerDatabaseRoutes.has(req.baseUrl);
   if (req.user.role === "staff" || useCustomerDatabase) {
     const pool = databaseSessions.get(decoded.sessionId);
     if (!pool)
