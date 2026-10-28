@@ -159,7 +159,7 @@ export default function AccountPage() {
             className="mt-3 flex w-full items-center justify-center gap-2 rounded-xl border border-red-200/80 bg-red-50/50 py-2.5 text-xs font-bold text-red-600 transition hover:bg-red-600 hover:text-white dark:border-red-500/20 dark:bg-red-500/10 dark:text-red-400 dark:hover:bg-red-600 dark:hover:text-white"
           >
             <Icon name="logout" className="h-4 w-4" />
-            <span>Đăng xuất phiên làm việc</span>
+            <span>Đăng xuất</span>
           </button>
         </aside>
 
@@ -168,7 +168,7 @@ export default function AccountPage() {
           {/* Profile Form */}
           <form onSubmit={save} className="card p-6 sm:p-8">
             <h2 className="text-base font-black text-slate-950 dark:text-white flex items-center gap-2">
-              <span>👤</span> Thông tin định danh cá nhân
+              Thông tin cá nhân
             </h2>
             <div className="mt-6 grid gap-4 sm:grid-cols-2">
               <Field
@@ -207,7 +207,7 @@ export default function AccountPage() {
           {/* Change Password Form */}
           <form onSubmit={change} className="card p-6 sm:p-8">
             <h2 className="text-base font-black text-slate-950 dark:text-white flex items-center gap-2">
-              <span>🔒</span> Bảo mật & Đổi mật khẩu
+             Bảo mật và Đổi mật khẩu
             </h2>
             <p className="mt-1 text-xs text-slate-400 leading-relaxed">
               Sau khi đổi mật khẩu thành công, bạn sẽ được tự động đăng xuất để đăng nhập lại bằng mật khẩu mới.
