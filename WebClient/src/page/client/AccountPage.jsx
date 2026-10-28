@@ -10,6 +10,7 @@ import {
 } from "../../redux/slices/authSlice";
 import Icon from "../../components/common/Icon";
 import { apiMessage } from "../../utils/format";
+
 export default function AccountPage() {
   const user = useSelector((s) => s.auth.user);
   const dispatch = useDispatch();
@@ -27,6 +28,7 @@ export default function AccountPage() {
   });
   const [saving, setSaving] = useState(false);
   const [changing, setChanging] = useState(false);
+
   useEffect(
     () =>
       setProfile({
@@ -37,6 +39,7 @@ export default function AccountPage() {
       }),
     [user],
   );
+
   const save = async (e) => {
     e.preventDefault();
     if (!profile.fullName.trim())
@@ -53,6 +56,7 @@ export default function AccountPage() {
       setSaving(false);
     }
   };
+
   const avatar = async (e) => {
     const file = e.target.files?.[0];
     if (!file) return;
@@ -69,6 +73,7 @@ export default function AccountPage() {
       e.target.value = "";
     }
   };
+
   const change = async (e) => {
     e.preventDefault();
     if (password.newPassword.length < 8)
@@ -90,33 +95,57 @@ export default function AccountPage() {
       setChanging(false);
     }
   };
+
   const signOut = async () => {
     await dispatch(logout());
     navigate("/login");
   };
+
   return (
-    <div className="container-page max-w-5xl py-10">
-      <div className="mb-8">
-        <h1 className="text-3xl font-black">Tài khoản</h1>
+    <div className="container-page max-w-5xl py-12">
+      {/* Header */}
+      <div className="mb-10 border-b border-slate-200/80 pb-6 dark:border-white/[0.08]">
+        <span className="text-[10px] font-extrabold uppercase tracking-[0.25em] text-red-600 dark:text-red-500">
+          Cài đặt & Hồ sơ
+        </span>
+        <h1 className="mt-1 text-3xl sm:text-4xl font-black tracking-tight text-slate-950 dark:text-white">
+          Tài khoản khách hàng
+        </h1>
+        <p className="mt-2 text-xs sm:text-sm text-slate-500 dark:text-slate-400">
+          Quản lý thông tin định danh, địa chỉ liên hệ và bảo mật mật khẩu của bạn.
+        </p>
       </div>
-      <div className="grid gap-6 lg:grid-cols-[.7fr_1.3fr]">
+
+      <div className="grid gap-8 lg:grid-cols-[0.7fr_1.3fr]">
+        {/* Left Column: Avatar & Quick Actions */}
         <aside className="card h-fit p-6 text-center">
-          {user?.avatar_url ? (
-            <img
-              src={user.avatar_url}
-              className="mx-auto h-28 w-28 rounded-full object-cover ring-4 ring-red-50"
-              alt="Ảnh đại diện"
-            />
-          ) : (
-            <div className="mx-auto grid h-28 w-28 place-items-center rounded-full bg-red-100 text-4xl font-black text-red-700">
-              {(user?.full_name || "K")[0]}
-            </div>
-          )}
-          <h2 className="mt-4 text-xl font-black">{user?.full_name}</h2>
-          <p className="mt-1 text-sm text-slate-500">{user?.email}</p>
-          <label className="btn-secondary mt-5 w-full">
-            <Icon name="image" className="mr-2 h-5 w-5" />
-            Đổi ảnh
+          <div className="relative mx-auto h-28 w-28">
+            {user?.avatar_url ? (
+              <img
+                src={user.avatar_url}
+                className="h-full w-full rounded-full object-cover ring-4 ring-red-500/20"
+                alt="Ảnh đại diện"
+              />
+            ) : (
+              <div className="grid h-full w-full place-items-center rounded-full bg-gradient-to-tr from-red-600 to-rose-600 text-3xl font-black text-white shadow-lg shadow-red-600/30">
+                {(user?.full_name || "K")[0]?.toUpperCase()}
+              </div>
+            )}
+          </div>
+
+          <h2 className="mt-4 text-lg font-black text-slate-950 dark:text-white">
+            {user?.full_name || "Khách hàng"}
+          </h2>
+          <p className="mt-0.5 text-xs text-slate-400 font-mono">
+            {user?.email}
+          </p>
+          <div className="mt-2 inline-flex items-center gap-1.5 rounded-full border border-red-500/30 bg-red-500/10 px-2.5 py-0.5 text-[10px] font-bold text-red-500">
+            Khách hàng định danh
+          </div>
+
+          <label className="btn-secondary mt-6 w-full cursor-pointer text-xs">
+            <Icon name="image" className="h-4 w-4" />
+            <span>Thay đổi ảnh đại diện</span>
             <input
               type="file"
               accept="image/*"
@@ -124,50 +153,66 @@ export default function AccountPage() {
               onChange={avatar}
             />
           </label>
+
           <button
             onClick={signOut}
-            className="mt-3 flex w-full items-center justify-center gap-2 rounded-xl px-4 py-3 text-sm font-bold text-red-700 hover:bg-red-50"
+            className="mt-3 flex w-full items-center justify-center gap-2 rounded-xl border border-red-200/80 bg-red-50/50 py-2.5 text-xs font-bold text-red-600 transition hover:bg-red-600 hover:text-white dark:border-red-500/20 dark:bg-red-500/10 dark:text-red-400 dark:hover:bg-red-600 dark:hover:text-white"
           >
-            <Icon name="logout" />
-            Đăng xuất
+            <Icon name="logout" className="h-4 w-4" />
+            <span>Đăng xuất phiên làm việc</span>
           </button>
         </aside>
-        <div className="space-y-6">
-          <form onSubmit={save} className="card p-6">
-            <h2 className="text-lg font-black">Thông tin cá nhân</h2>
-            <div className="mt-5 grid gap-4 sm:grid-cols-2">
+
+        {/* Right Column: Forms */}
+        <div className="space-y-8">
+          {/* Profile Form */}
+          <form onSubmit={save} className="card p-6 sm:p-8">
+            <h2 className="text-base font-black text-slate-950 dark:text-white flex items-center gap-2">
+              <span>👤</span> Thông tin định danh cá nhân
+            </h2>
+            <div className="mt-6 grid gap-4 sm:grid-cols-2">
               <Field
                 label="Họ và tên"
                 value={profile.fullName}
                 onChange={(v) => setProfile({ ...profile, fullName: v })}
+                required
               />
               <Field
-                label="Email"
+                label="Địa chỉ Email"
                 type="email"
                 value={profile.email}
                 onChange={(v) => setProfile({ ...profile, email: v })}
+                required
               />
               <Field
-                label="Số điện thoại"
+                label="Số điện thoại liên hệ"
                 value={profile.phone}
                 onChange={(v) => setProfile({ ...profile, phone: v })}
+                placeholder="09xx xxx xxx"
               />
               <Field
-                label="Địa chỉ"
+                label="Địa chỉ giao nhận"
                 value={profile.address}
                 onChange={(v) => setProfile({ ...profile, address: v })}
+                placeholder="Số nhà, đường, quận/huyện..."
               />
             </div>
-            <button className="btn-primary mt-6" disabled={saving}>
-              {saving ? "Đang lưu..." : "Lưu thay đổi"}
-            </button>
+            <div className="mt-6 flex justify-end">
+              <button className="btn-primary text-xs" disabled={saving}>
+                {saving ? "Đang lưu thay đổi..." : "Lưu thay đổi hồ sơ"}
+              </button>
+            </div>
           </form>
-          <form onSubmit={change} className="card p-6">
-            <h2 className="text-lg font-black">Đổi mật khẩu</h2>
-            <p className="mt-2 text-xs text-slate-500">
-              Sau khi đổi mật khẩu, tất cả phiên đăng nhập sẽ kết thúc.
+
+          {/* Change Password Form */}
+          <form onSubmit={change} className="card p-6 sm:p-8">
+            <h2 className="text-base font-black text-slate-950 dark:text-white flex items-center gap-2">
+              <span>🔒</span> Bảo mật & Đổi mật khẩu
+            </h2>
+            <p className="mt-1 text-xs text-slate-400 leading-relaxed">
+              Sau khi đổi mật khẩu thành công, bạn sẽ được tự động đăng xuất để đăng nhập lại bằng mật khẩu mới.
             </p>
-            <div className="mt-5 grid gap-4">
+            <div className="mt-6 grid gap-4">
               <Field
                 label="Mật khẩu hiện tại"
                 type="password"
@@ -175,33 +220,43 @@ export default function AccountPage() {
                 onChange={(v) =>
                   setPassword({ ...password, currentPassword: v })
                 }
+                required
               />
-              <Field
-                label="Mật khẩu mới"
-                type="password"
-                value={password.newPassword}
-                onChange={(v) => setPassword({ ...password, newPassword: v })}
-              />
-              <Field
-                label="Nhập lại mật khẩu mới"
-                type="password"
-                value={password.confirm}
-                onChange={(v) => setPassword({ ...password, confirm: v })}
-              />
+              <div className="grid gap-4 sm:grid-cols-2">
+                <Field
+                  label="Mật khẩu mới (tối thiểu 8 ký tự)"
+                  type="password"
+                  value={password.newPassword}
+                  onChange={(v) => setPassword({ ...password, newPassword: v })}
+                  required
+                />
+                <Field
+                  label="Xác nhận mật khẩu mới"
+                  type="password"
+                  value={password.confirm}
+                  onChange={(v) => setPassword({ ...password, confirm: v })}
+                  required
+                />
+              </div>
             </div>
-            <button className="btn-secondary mt-6" disabled={changing}>
-              {changing ? "Đang xử lý..." : "Đổi mật khẩu"}
-            </button>
+            <div className="mt-6 flex justify-end">
+              <button className="btn-secondary text-xs" disabled={changing}>
+                {changing ? "Đang xử lý..." : "Cập nhật mật khẩu"}
+              </button>
+            </div>
           </form>
         </div>
       </div>
     </div>
   );
 }
+
 function Field({ label, onChange, ...props }) {
   return (
     <label className="block">
-      <span className="mb-2 block text-sm font-bold">{label}</span>
+      <span className="mb-2 block text-xs font-bold text-slate-700 dark:text-slate-300">
+        {label}
+      </span>
       <input
         className="field"
         onChange={(e) => onChange(e.target.value)}
