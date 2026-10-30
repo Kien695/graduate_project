@@ -14,6 +14,7 @@ import EmployeePage from "../page/admin/EmployeePage";
 import EmployeeDetailPage from "../page/admin/EmployeeDetailPage";
 import ProfilePage from "../page/admin/ProfilePage";
 import BackupPage from "../page/admin/BackupPage";
+import MonitoringPage from "../page/admin/MonitoringPage";
 const AdminOnly = ({ children }) => (
   <ProtectedRouter allowedRoles={["ADMIN"]}>{children}</ProtectedRouter>
 );
@@ -67,6 +68,7 @@ export default function AppRouter() {
         { index: true, element: <Navigate to="dashboard" replace /> },
         { path: "dashboard", element: <FeatureOnly feature="dashboard"><DashboardPage /></FeatureOnly> },
         { path: "backups", element: <AdminOnly><BackupPage /></AdminOnly> },
+        { path: "monitoring", element: <ProtectedRouter allowedRoles={["ADMIN", "MANAGER"]}><MonitoringPage /></ProtectedRouter> },
         { path: "vehicles", element: <FeatureOnly feature="vehicles"><VehiclePage /></FeatureOnly> },
         { path: "accessories", element: <FeatureOnly feature="accessories"><AccessoryPage /></FeatureOnly> },
         { path: "orders", element: <FeatureOnly feature={["orders", "accessoryOrders"]}><OrderPage /></FeatureOnly> },

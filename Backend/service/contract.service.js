@@ -153,7 +153,7 @@ const setStatus = (id, status, user, ipAddress) =>
       : null;
     if (!safeStatus)
       throw new ErrorHandler(
-        "Tráº¡ng thÃ¡i há»£p Ä‘á»“ng khÃ´ng há»£p lá»‡",
+        "Trạng thái hợp đồng không hợp lệ",
         400,
       );
     const { rows } = await client.query(

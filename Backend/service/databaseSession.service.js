@@ -72,5 +72,7 @@ const close = async (sessionId) => {
 const closeUserSessions = async (sessionIds = []) =>
   Promise.all(sessionIds.map((id) => close(id)));
 
-module.exports = { createVerifiedPool, register, get, touch, close, closeUserSessions };
+const stats = () => ({ pools: pools.size, limit: MAX_SESSIONS });
+
+module.exports = { stats, createVerifiedPool, register, get, touch, close, closeUserSessions };
 

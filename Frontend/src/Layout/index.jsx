@@ -25,6 +25,12 @@ const nav = [
   { to: "/admin/security", icon: "shield", label: "Bảo mật", roles: ["ADMIN"] },
   { to: "/admin/profile", icon: "users", label: "Thông tin cá nhân" },
   {
+    to: "/admin/monitoring",
+    icon: "dashboard",
+    label: "Giám sát hệ thống",
+    roles: ["ADMIN", "MANAGER"],
+  },
+  {
     to: "/admin/backups",
     icon: "box",
     label: "Sao lưu & phục hồi",
