@@ -1,0 +1,41 @@
+services:
+  app:
+    build: .
+    image: tankien/api_graduate:v1
+    container_name: server-graduate-api
+    ports:
+      - "4000:4000"
+    env_file:
+      - .env
+    environment:
+      DB_HOST: postgres
+      DB_PORT: 5432
+      DB_NAME: graduate_project
+      BACKUP_DIR: /backups
+      PG_DUMP_PATH: pg_dump
+      PG_RESTORE_PATH: pg_restore
+    volumes:
+      - ./backups:/backups
+    depends_on:
+      postgres:
+        condition: service_healthy
+    restart: unless-stopped
+
+  postgres:
+    image: postgres:16
+    container_name: postgre_graduate
+    environment:
+      POSTGRES_USER: postgres
+      POSTGRES_PASSWORD: ${DB_PASSWORD}
+      POSTGRES_DB: graduate_project
+    volumes:
+      - postgres_data:/var/lib/postgresql/data
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U postgres -d graduate_project"]
+      interval: 5s
+      timeout: 5s
+      retries: 10
+    restart: unless-stopped
+
+volumes:
+  postgres_data:
