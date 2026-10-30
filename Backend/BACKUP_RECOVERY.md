@@ -1,45 +1,50 @@
-# Sao lưu và phục hồi bằng Neon Snapshot
+# Sao lưu và phục hồi PostgreSQL bằng công cụ local
 
-Trang `/admin/backups` chỉ dành cho admin. Nút **Sao lưu ngay** gọi Neon API từ
-Backend để tạo snapshot của branch được cấu hình. API key không bao giờ được gửi
-cho trình duyệt. Snapshot được đặt thời điểm hết hạn theo `retention_days`.
+Trang `/admin/backups` chỉ dành cho admin. Backend chạy `pg_dump` để tạo file
+custom-format (`.dump`) và chạy `pg_restore` khi phục hồi. Trình duyệt không nhận
+thông tin đăng nhập database và không trực tiếp chạy các công cụ PostgreSQL.
 
-## Cấu hình phía Backend
+## Cấu hình Backend/VPS
+
+Cài PostgreSQL client sao cho tài khoản chạy Backend gọi được `pg_dump` và
+`pg_restore` từ `PATH`. Phiên bản client nên bằng hoặc mới hơn phiên bản PostgreSQL
+server. Nếu công cụ không nằm trong `PATH`, cấu hình đường dẫn tuyệt đối:
 
 ```env
-NEON_API_KEY=your_project_scoped_api_key
-NEON_PROJECT_ID=your-project-id
-NEON_BRANCH_ID=br-your-current-branch-id
-NEON_BRANCH_NAME=main
-NEON_API_TIMEOUT_MS=30000
-NEON_OPERATION_TIMEOUT_MS=120000
-NEON_MAX_APP_SNAPSHOTS=9
+PG_DUMP_PATH=/usr/bin/pg_dump
+PG_RESTORE_PATH=/usr/bin/pg_restore
 ```
 
-`NEON_BRANCH_NAME` được khuyến nghị. Backend tra ID hiện tại theo tên trước mỗi
-thao tác vì ID phía sau branch có thể thay đổi sau restore. `NEON_BRANCH_ID` là
-giá trị dự phòng khi không khai báo tên.
+Thông tin kết nối ưu tiên lấy từ `DATABASE_URL`:
 
-Nên dùng project-scoped API key có quyền trên đúng project. Không ghi key vào
-frontend, source control hoặc log. Snapshot cần gói Neon hỗ trợ tính năng này.
-Ứng dụng giữ tối đa `NEON_MAX_APP_SNAPSHOTS` snapshot có tiền tố `autodealer-`.
-Khi chạm giới hạn, snapshot cũ nhất do ứng dụng tạo sẽ bị xóa trước; snapshot tạo
-thủ công trong Neon Console không bị ứng dụng tự xóa.
+```env
+DATABASE_URL=postgresql://app_user:password@127.0.0.1:5432/graduate_project
+```
 
-## Phục hồi
+Nếu không có `DATABASE_URL`, Backend dùng các biến hiện có `DB_HOST`, `DB_PORT`,
+`DB_NAME`, `DB_USER`, `DB_PASSWORD` và `DB_SSL`. Mật khẩu được truyền cho
+PostgreSQL client qua `PGPASSWORD`, không nằm trong tham số command line.
 
-Danh sách được đọc trực tiếp từ Neon, không đọc file `.dump`. Khi admin chọn một
-snapshot, giao diện hiển thị tên/ID branch đích và yêu cầu nhập `PHUC HOI`.
-Backend chỉ cho phép ghi đè root branch, gọi restore với `finalize_restore=true`
-và chờ các operation của Neon hoàn tất. Backend không gửi lại tên branch đích làm
-tên branch trung gian; Neon tự sinh tên duy nhất để tránh xung đột. Người dùng bị
-đăng xuất sau thành công.
+File mặc định nằm trong `Backend/backups`. Trên VPS nên cấu hình một thư mục bền
+vững, chỉ tài khoản chạy Backend có quyền đọc/ghi và nằm ngoài thư mục release:
 
-Restore thay cả dữ liệu lẫn schema và làm mất các thay đổi sau thời điểm snapshot.
-Nó không phục hồi ảnh Cloudinary, biến môi trường hay secret. Nếu database đang
-không hoạt động khiến admin không thể đăng nhập, thực hiện restore trong Neon
-Console. Không gửi lại yêu cầu tạo/restore khi gặp timeout: POST có thể đã tới
-Neon; trước tiên hãy tải lại danh sách hoặc kiểm tra Neon Console.
+```env
+BACKUP_DIR=/var/lib/autodealer/backups
+```
 
-Lịch tự động vẫn do tiến trình Backend chạy. Backend phải hoạt động đúng giờ; nếu
-không có snapshot do ứng dụng tạo trong 24 giờ, cơ chế catch-up sẽ tạo một bản.
+Nếu deploy bằng container, mount `BACKUP_DIR` vào persistent volume. File trong
+filesystem tạm thời sẽ mất khi redeploy.
+
+## Hoạt động
+
+- **Sao lưu ngay** tạo file `autodealer-<thời-gian>.dump` bằng `pg_dump -Fc`.
+- Danh sách trên giao diện được đọc từ các file hợp lệ trong `BACKUP_DIR`.
+- Lịch tự động và cơ chế chạy bù giữ nguyên. File quá `retention_days` bị xóa.
+- Phục hồi dùng `pg_restore --clean --if-exists --no-owner --no-privileges` vào
+  đúng database đã cấu hình và đăng xuất admin sau khi hoàn tất.
+
+Phục hồi thay cả dữ liệu lẫn schema và làm mất các thay đổi sau thời điểm backup.
+Nên dừng lưu lượng ghi và tạo một bản sao mới trước khi phục hồi. Chức năng này
+không sao lưu role/global object của PostgreSQL, ảnh Cloudinary, file upload, biến
+môi trường hay secret. Khi database hỏng đến mức không thể đăng nhập giao diện,
+chạy `pg_restore` thủ công trên VPS.

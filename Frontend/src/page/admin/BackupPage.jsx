@@ -75,7 +75,7 @@ export default function BackupPage() {
       <div>
         <h1 className="text-2xl font-bold">Sao lưu & phục hồi</h1>
         <p className="mt-1 text-sm text-slate-500">
-          Quản lý Neon Snapshot và khôi phục database khi xảy ra sự cố.
+          Quản lý bản sao PostgreSQL và khôi phục database khi xảy ra sự cố.
         </p>
       </div>
       {error && (
@@ -148,8 +148,8 @@ export default function BackupPage() {
             </div>
             <p className="text-sm text-slate-500">
               Lần chạy đã lên lịch: {date(settings.next_run)}. Backend cần hoạt
-              động vào giờ này. Snapshot được Neon lưu và tự hết hạn theo số
-              ngày cấu hình; ảnh trên Cloudinary không nằm trong snapshot database.
+              động vào giờ này. File sao lưu được lưu trên máy chủ và tự hết hạn theo số
+              ngày cấu hình; ảnh trên Cloudinary không nằm trong bản sao database.
             </p>
             <button className={button} disabled={busy}>
               Lưu lịch
@@ -267,13 +267,13 @@ export default function BackupPage() {
               {date(selected.created_at)}).
             </p>
             <p>
-              Branch đích: <strong>{selected.target_branch_name}</strong>{" "}
+              Database đích: <strong>{selected.target_branch_name}</strong>{" "}
               <span className="break-all text-slate-500">({selected.target_branch_id})</span>.
             </p>
             <p className="text-red-600">
-              Neon sẽ ghi đè toàn bộ dữ liệu và schema hiện tại của branch đích
-              bằng snapshot đã chọn. Các thay đổi sau thời điểm đó sẽ mất. Hãy
-              dừng thao tác của người dùng và tạo snapshot mới trước khi tiếp tục.
+              PostgreSQL sẽ ghi đè toàn bộ dữ liệu và schema hiện tại bằng bản sao
+              đã chọn. Các thay đổi sau thời điểm đó sẽ mất. Hãy dừng thao tác của
+              người dùng và tạo bản sao mới trước khi tiếp tục.
             </p>
             <label className="block">
               Nhập PHUC HOI để xác nhận

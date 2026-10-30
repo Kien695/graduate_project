@@ -299,7 +299,7 @@ const run = async () => {
 
     const backups = await call("GET", "/backups");
     assert(Array.isArray(backups), "Backup list");
-    pass("Neon backup list");
+    pass("PostgreSQL backup list");
 
     await call("POST", "/auth/logout", { refreshToken }, false);
     pass("Logout");
