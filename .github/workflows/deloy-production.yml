@@ -4,6 +4,9 @@ on:
   push:
     branches:
       - main
+    paths:
+      - "Backend/**"
+      - ".github/workflows/**"
 
 concurrency:
   group: deploy-graduate-production
@@ -29,8 +32,8 @@ jobs:
       - name: Build and push Docker image
         uses: docker/build-push-action@v5
         with:
-          context: .
-          file: ./Dockerfile
+          context: ./Backend
+          file: ./Backend/Dockerfile
           platforms: linux/amd64
           push: true
           tags: tankien/api_graduate:v1
