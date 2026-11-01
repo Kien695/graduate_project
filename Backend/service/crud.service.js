@@ -131,12 +131,12 @@ const list = async (table, query = {}) => {
           : `(name ILIKE ${p})`,
     );
   }
-  const total = table === "customers" ? Number((await database.query(
+  const total = ["customers", "accessories"].includes(table) ? Number((await database.query(
     `SELECT COUNT(*) AS total FROM ${source}${where.length ? ` WHERE ${where.join(" AND ")}` : ""}`, values,
   )).rows[0].total) : undefined;
   values.push(limit, (page - 1) * limit);
   const { rows } = await database.query(
-    `SELECT * FROM ${source}${where.length ? ` WHERE ${where.join(" AND ")}` : ""} ORDER BY created_at DESC LIMIT $${values.length - 1} OFFSET $${values.length}`,
+    `SELECT * FROM ${source}${where.length ? ` WHERE ${where.join(" AND ")}` : ""} ORDER BY created_at DESC, id DESC LIMIT $${values.length - 1} OFFSET $${values.length}`,
     values,
   );
   return { items: rows.map((row) => present(table, row)), page, limit, ...(total !== undefined ? { total } : {}) };
