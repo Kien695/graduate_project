@@ -10,6 +10,7 @@
 //   SCENARIO   browse | login | order  (mặc định browse)
 //   VEHICLE_ID bắt buộc với SCENARIO=order
 import http from "k6/http";
+import exec from "k6/execution";
 import { check, sleep } from "k6";
 import { Rate, Trend, Counter } from "k6/metrics";
 
@@ -20,6 +21,18 @@ const DURATION = __ENV.DURATION || "60s";
 const SCENARIO = __ENV.SCENARIO || "browse";
 const PASSWORD = __ENV.LOADTEST_PASSWORD || "LoadTest@2026Aa";
 const PREFIX = __ENV.PREFIX || "tai";
+
+const RAMP_MS = 20000;
+const toMs = (text) => {
+  const m = /^(\d+)(s|m)$/.exec(String(text));
+  return m ? Number(m[1]) * (m[2] === "m" ? 60000 : 1000) : 60000;
+};
+const STEADY_MS = toMs(DURATION);
+// Gắn nhãn giai đoạn để chỉ thống kê lúc đang giữ đủ tải (bỏ pha tăng và giảm dần)
+const stage = () => {
+  const elapsed = Date.now() - exec.scenario.startTime;
+  return elapsed < RAMP_MS ? "ramp" : elapsed < RAMP_MS + STEADY_MS ? "steady" : "down";
+};
 
 const errorRate = new Rate("errors");
 const loginTime = new Trend("login_time", true);
@@ -47,6 +60,9 @@ export const options = {
   thresholds: {
     http_req_duration: ["p(95)<2000"],
     errors: ["rate<0.05"],
+    // Các ngưỡng luôn đúng, chỉ để k6 xuất thống kê riêng cho giai đoạn giữ tải
+    "http_req_duration{stage:steady}": ["max>=0"],
+    "http_reqs{stage:steady}": ["count>=0"],
   },
 };
 
@@ -62,6 +78,30 @@ let token = null;
 let iteration = 0;
 const json = { "Content-Type": "application/json" };
 
+// Ghi lại request chậm để đối chiếu giờ với vmstat/log máy chủ (k6 --console-output)
+const SLOW_MS = Number(__ENV.SLOW_MS || 3000);
+function logSlow(label, response) {
+  if (response.timings.duration < SLOW_MS) return;
+  const t = response.timings;
+  console.log(
+    JSON.stringify({
+      at: new Date().toISOString(),
+      vu: __VU,
+      stage: stage(),
+      req: label,
+      status: response.status,
+      total_ms: Math.round(t.duration),
+      blocked_ms: Math.round(t.blocked),
+      connecting_ms: Math.round(t.connecting),
+      tls_ms: Math.round(t.tls_handshaking),
+      sending_ms: Math.round(t.sending),
+      waiting_ms: Math.round(t.waiting),
+      receiving_ms: Math.round(t.receiving),
+      error_code: response.error_code || 0,
+    }),
+  );
+}
+
 function login() {
   const response = http.post(
     `${BASE_URL}/auth/login`,
@@ -71,9 +111,10 @@ function login() {
       deviceId: `k6-mobile-${__VU}`,
       deviceType: "MOBILE",
     }),
-    { headers: json, tags: { name: "login" } },
+    { headers: json, tags: { name: "login", stage: stage() } },
   );
   loginTime.add(response.timings.duration);
+  logSlow("POST /auth/login", response);
   const ok = check(response, { "login 200": (r) => r.status === 200 });
   errorRate.add(!ok);
   if (!ok) {
@@ -89,10 +130,11 @@ function login() {
 function call(method, path, body, expected = [200], name) {
   const params = {
     headers: { ...json, Authorization: `Bearer ${token}` },
-    tags: { name: name || path.split("?")[0] },
+    tags: { name: name || path.split("?")[0], stage: stage() },
   };
   const response = method === "GET" ? http.get(`${BASE_URL}${path}`, params) : http.post(`${BASE_URL}${path}`, body, params);
   apiTime.add(response.timings.duration);
+  logSlow(`${method} ${name || path.split("?")[0]}`, response);
   const ok = expected.includes(response.status);
   errorRate.add(!ok);
   if (response.status >= 500) status5xx.add(1);
@@ -144,6 +186,14 @@ export function handleSummary(data) {
     status_401: m("status_401", "count") || 0,
     login_failures: m("login_failures", "count") || 0,
   };
+  const steady = data.metrics["http_req_duration{stage:steady}"];
+  const steadyCount = data.metrics["http_reqs{stage:steady}"];
+  if (steady && steadyCount) {
+    row.steady_rps = steadyCount.values.count / (STEADY_MS / 1000);
+    row.steady_avg_ms = steady.values.avg;
+    row.steady_p95_ms = steady.values["p(95)"];
+    row.steady_max_ms = steady.values.max;
+  }
   const text = Object.entries(row).map(([k, v]) => `${k}: ${typeof v === "number" ? Math.round(v * 100) / 100 : v}`).join("\n");
   return {
     [`${name}.json`]: JSON.stringify({ summary: row, raw: data }, null, 2),

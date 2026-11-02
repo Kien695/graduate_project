@@ -1,0 +1,2 @@
+﻿"scenario","vus","requests","rps","avg_ms","p95_ms","max_ms","error_rate","login_p95_ms","status_5xx","status_401","login_failures","steady_rps","steady_avg_ms","steady_p95_ms","steady_max_ms","ended_at"
+"browse","50","4503","44.917517373323655","165.98240661781008","252.82871999999986","19583.1357","0","763.42058","0","0","0","59.93333333333333","172.470972330367","236.82395","19583.1357","16:58:39"
