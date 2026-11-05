@@ -1,0 +1,12 @@
+scenario: browse
+vus: 50
+requests: 4305
+rps: 43.22
+avg_ms: 275.67
+p95_ms: 356.55
+max_ms: 36304.21
+error_rate: 0
+login_p95_ms: 895.93
+status_5xx: 0
+status_401: 0
+login_failures: 0
