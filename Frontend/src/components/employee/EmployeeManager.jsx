@@ -473,7 +473,7 @@ export default function EmployeeManager() {
           <div className="space-y-4">
             {permissionGroupLock && (
               <div className="rounded-xl border border-indigo-200 bg-indigo-50 p-3 text-xs text-indigo-800 dark:border-indigo-900 dark:bg-indigo-950/40 dark:text-indigo-200">
-                Quyền của nhân viên này theo nhóm quyền <strong>{permissionGroupLock.name}</strong>. Để thay đổi, hãy sửa nhóm quyền hoặc bỏ nhân viên khỏi nhóm trong màn hình "Nhóm quyền".
+                Quyền của nhân viên này theo nhóm quyền <strong>{permissionGroupLock.name}</strong>.
               </div>
             )}
             <PermissionMatrix
@@ -481,7 +481,6 @@ export default function EmployeeManager() {
               onToggle={togglePermission}
               readOnly={Boolean(permissionGroupLock)}
             />
-            <p className="text-xs text-slate-500">Quyền hiệu lực được đọc trực tiếp từ PostgreSQL. Hệ thống sẽ báo lỗi nếu quyền không thể thu hồi do PUBLIC, role kế thừa hoặc quyền sở hữu.</p>
             <div className="flex justify-end gap-3">
               <button type="button" onClick={() => setPermissionModal(false)} className="rounded-xl border px-5 py-2.5">Hủy</button>
               {!permissionGroupLock && (
