@@ -12,6 +12,7 @@ import CustomerPage from "../page/admin/CustomerPage";
 import SecurityPage from "../page/admin/SecurityPage";
 import EmployeePage from "../page/admin/EmployeePage";
 import EmployeeDetailPage from "../page/admin/EmployeeDetailPage";
+import PermissionGroupPage from "../page/admin/PermissionGroupPage";
 import ProfilePage from "../page/admin/ProfilePage";
 import BackupPage from "../page/admin/BackupPage";
 import MonitoringPage from "../page/admin/MonitoringPage";
@@ -96,6 +97,14 @@ export default function AppRouter() {
           element: (
             <AdminOnly>
               <EmployeeDetailPage />
+            </AdminOnly>
+          ),
+        },
+        {
+          path: "permission-groups",
+          element: (
+            <AdminOnly>
+              <PermissionGroupPage />
             </AdminOnly>
           ),
         },
