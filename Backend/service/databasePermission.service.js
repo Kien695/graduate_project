@@ -61,7 +61,7 @@ const FEATURES = Object.freeze({
     },
     operations: PRIVILEGES,
   },
-  inspections: { label: "Kiểm định xe", tables: ["inspections", "inspection_images"], readTables: ["vehicles", "orders", "contracts"], operations: PRIVILEGES },
+  inspections: { label: "Kiểm định xe", tables: ["inspections", "inspection_images"], readTables: ["vehicles", "orders", "contracts", "users", "customers"], operations: PRIVILEGES },
   customers: { label: "Khách hàng", tables: ["customers", "customer_storage"], operations: PRIVILEGES },
   accessoryOrders: {
     label: "Đơn phụ kiện",
