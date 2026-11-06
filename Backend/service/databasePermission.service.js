@@ -142,19 +142,30 @@ const readWithClient = async (employeeId, client) => {
        AS x(feature_key text,table_name text,privilege text)`,
     [employee.db_user, JSON.stringify(checks)],
   );
+  // "effective" là trạng thái Postgres thật (có thể bị rò rỉ qua readTables của
+  // feature khác). "permissions" (declared) chỉ phản ánh đúng những gì admin đã
+  // tick cho CHÍNH feature này — dùng để hiển thị checkbox/menu, tránh hiểu nhầm
+  // như case "Kiểm định xe" vô tình làm "Xe"/"Đơn đặt hàng" hiện lên.
+  const { rows: declaredRows } = await client.query(
+    "SELECT feature_key,privilege FROM employee_feature_permissions WHERE employee_id=$1",
+    [employee.id],
+  );
+  const declaredSet = new Set(declaredRows.map((row) => `${row.feature_key}:${row.privilege}`));
   const result = Object.entries(features).map(([key, feature]) => {
     const permissions = {};
+    const effective = {};
     const external = {};
     for (const privilege of feature.operations) {
       const matches = rows.filter(
         (row) => row.feature_key === key && row.privilege === privilege,
       );
-      permissions[privilege] = matches.every((row) => row.effective);
+      effective[privilege] = matches.every((row) => row.effective);
+      permissions[privilege] = declaredSet.has(`${key}:${privilege}`);
       external[privilege] = matches.some(
         (row) => row.effective && !row.direct,
       );
     }
-    return { key, label: feature.label, operations: feature.operations, permissions, external };
+    return { key, label: feature.label, operations: feature.operations, permissions, effective, external };
   });
   return { dbUser: employee.db_user, features: result };
 };
@@ -180,6 +191,10 @@ const update = async (employeeId, requested = {}) => withSystemTransaction(async
   const managedTables = new Set();
   const insertTables = new Set();
   const desired = new Map();
+  // "declared" lưu đúng những lựa chọn trực tiếp cho CHÍNH feature đó (không
+  // tính phần SELECT kéo theo qua readTables của feature khác) — dùng để hiển
+  // thị checkbox/menu, tách khỏi "desired" (dùng cho GRANT/REVOKE thật).
+  const declared = [];
   const want = (table, privilege) => {
     managedTables.add(table);
     if (!desired.has(table)) desired.set(table, new Set());
@@ -199,6 +214,7 @@ const update = async (employeeId, requested = {}) => withSystemTransaction(async
       }
     for (const privilege of feature.operations) {
       if (selection[privilege] === true) {
+        declared.push({ feature_key: key, privilege });
         for (const table of feature.tables) want(table, privilege);
         for (const entry of feature.supportPrivileges?.[privilege] || [])
           want(entry.table, entry.privilege);
@@ -247,12 +263,20 @@ const update = async (employeeId, requested = {}) => withSystemTransaction(async
     await client.query(
       `REVOKE USAGE,SELECT ON SEQUENCE ${revokedSequences.map((row) => row.sequence_name).join(",")} FROM ${role}`,
     );
+  await client.query("DELETE FROM employee_feature_permissions WHERE employee_id=$1", [employeeId]);
+  if (declared.length)
+    await client.query(
+      `INSERT INTO employee_feature_permissions(employee_id,feature_key,privilege)
+       SELECT $1,feature_key,privilege FROM jsonb_to_recordset($2::jsonb)
+         AS x(feature_key text,privilege text)`,
+      [employeeId, JSON.stringify(declared)],
+    );
   const current = await readWithClient(employeeId, client);
   const blocked = current.features.flatMap((f) =>
     f.operations
       .filter((p) =>
         requested[f.key]?.[p] !== true &&
-        f.permissions[p] &&
+        f.effective[p] &&
         f.external[p],
       )
       .map((p) => `${f.label}: ${p}`),
