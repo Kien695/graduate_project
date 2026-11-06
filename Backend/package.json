@@ -8,6 +8,7 @@
     "db:migrate": "node database/migrate.js",
     "db:encrypt-profiles": "node database/migrateEncryptedProfiles.js",
     "db:backfill-phone-hash": "node database/backfillPhoneLookupHash.js",
+    "db:backfill-declared-permissions": "node database/backfillDeclaredPermissions.js",
     "db:validate": "node database/validateSchema.js",
     "db:inspect": "node database/inspectSchema.js",
     "db:create-admin": "node database/createAdmin.js",
