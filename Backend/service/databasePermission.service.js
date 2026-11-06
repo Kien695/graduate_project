@@ -215,14 +215,16 @@ const update = async (employeeId, requested = {}) => withSystemTransaction(async
     const revoked = allTables.filter(
       (table) => desired.get(table)?.has(privilege) !== true,
     );
-    if (granted.length)
-      await client.query(
-        `GRANT ${privilege} ON TABLE ${granted.map((table) => `public.${quoteIdentifier(table)}`).join(",")} TO ${role}`,
-      );
-    if (revoked.length)
-      await client.query(
-        `REVOKE ${privilege} ON TABLE ${revoked.map((table) => `public.${quoteIdentifier(table)}`).join(",")} FROM ${role}`,
-      );
+    if (granted.length) {
+      const sql = `GRANT ${privilege} ON TABLE ${granted.map((table) => `public.${quoteIdentifier(table)}`).join(",")} TO ${role}`;
+      console.warn("DEBUG_PERM_SQL", sql);
+      await client.query(sql);
+    }
+    if (revoked.length) {
+      const sql = `REVOKE ${privilege} ON TABLE ${revoked.map((table) => `public.${quoteIdentifier(table)}`).join(",")} FROM ${role}`;
+      console.warn("DEBUG_PERM_SQL", sql);
+      await client.query(sql);
+    }
   }
   const { rows: sequenceRows } = await client.query(
     `SELECT table_name,
