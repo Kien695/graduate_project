@@ -22,6 +22,12 @@ const nav = [
     label: "Quản lý nhân viên",
     roles: ["ADMIN"],
   },
+  {
+    to: "/admin/permission-groups",
+    icon: "shield",
+    label: "Nhóm quyền",
+    roles: ["ADMIN"],
+  },
   { to: "/admin/security", icon: "shield", label: "Bảo mật", roles: ["ADMIN"] },
   { to: "/admin/profile", icon: "users", label: "Thông tin cá nhân" },
   {

@@ -14,6 +14,7 @@ const securityLevelRouter = require("./securityLevel.router");
 const backupRouter = require("./backup.router");
 const monitoringRouter = require("./monitoring.router");
 const employeeRouter = require("./employee.router");
+const permissionGroupRouter = require("./permissionGroup.router");
 const customerOrderRouter = require("./customerOrder.router");
 const customerAccessoryOrderRouter = require("./customerAccessoryOrder.router");
 const customerContractRouter = require("./customerContract.router");
@@ -36,6 +37,7 @@ module.exports = (app) => {
   app.use("/api/backups", backupRouter);
   app.use("/api/monitoring", monitoringRouter);
   app.use("/api/employees", employeeRouter);
+  app.use("/api/permission-groups", permissionGroupRouter);
   app.use("/api/customer/orders", customerOrderRouter);
   app.use("/api/customer/accessory-orders", customerAccessoryOrderRouter);
   app.use("/api/customer/contracts", customerContractRouter);

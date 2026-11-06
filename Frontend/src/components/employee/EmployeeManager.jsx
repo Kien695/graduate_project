@@ -8,6 +8,7 @@ import LoadingState from "../common/LoadingState";
 import Modal from "../common/Modal";
 import StatusBadge from "../common/StatusBadge";
 import StatusFilter from "../common/StatusFilter";
+import PermissionMatrix from "../common/PermissionMatrix";
 
 const statusOptions = [
   { value: "active", label: "Đang làm việc" },
@@ -23,11 +24,13 @@ const emptyForm = {
   position: "",
   department: "",
   securityLevelId: "",
+  permissionGroupId: "",
 };
 export default function EmployeeManager() {
   const navigate = useNavigate();
   const [items, setItems] = useState([]),
     [levels, setLevels] = useState([]),
+    [groups, setGroups] = useState([]),
     [loading, setLoading] = useState(true),
     [submitting, setSubmitting] = useState(false);
   const [search, setSearch] = useState(""),
@@ -39,6 +42,7 @@ export default function EmployeeManager() {
   const [permissionModal, setPermissionModal] = useState(false),
     [permissionEmployee, setPermissionEmployee] = useState(null),
     [permissionFeatures, setPermissionFeatures] = useState([]),
+    [permissionGroupLock, setPermissionGroupLock] = useState(null),
     [permissionLoading, setPermissionLoading] = useState(false);
   const [deleteEmployee, setDeleteEmployee] = useState(null),
     [deleting, setDeleting] = useState(false);
@@ -68,8 +72,16 @@ export default function EmployeeManager() {
       toast.error(e.response?.data?.message || "Không thể tải nhãn bảo mật");
     }
   };
+  const loadGroups = async () => {
+    try {
+      const response = await getData("/permission-groups");
+      setGroups(response.data?.items || []);
+    } catch {
+      setGroups([]);
+    }
+  };
   useEffect(() => {
-    Promise.resolve().then(() => Promise.all([load(), loadLevels()]));
+    Promise.resolve().then(() => Promise.all([load(), loadLevels(), loadGroups()]));
   }, []); // Initial API synchronization.
   const filtered = useMemo(
     () =>
@@ -97,25 +109,36 @@ export default function EmployeeManager() {
             position: item.position || "",
             department: item.department || "",
             securityLevelId: item.security_level_id || "",
+            permissionGroupId: item.permission_group_id || "",
             password: "",
           }
         : emptyForm,
     );
     setModal(true);
     void loadLevels();
+    void loadGroups();
   };
   const change = (e) => setForm({ ...form, [e.target.name]: e.target.value });
   const submit = async (e) => {
     e.preventDefault();
     setSubmitting(true);
     try {
+      const newGroupId = form.permissionGroupId ? Number(form.permissionGroupId) : null;
       if (editing) {
         await putData(`/employees/${editing.id}`, form);
         if (Number(form.securityLevelId) !== Number(editing.security_level_id))
           await patchData(`/employees/${editing.id}/security-level`, {
             securityLevelId: Number(form.securityLevelId),
           });
-      } else await postData("/employees", form);
+        const oldGroupId = editing.permission_group_id || null;
+        if (newGroupId !== oldGroupId) {
+          if (newGroupId) await postData(`/permission-groups/${newGroupId}/members/${editing.id}`);
+          else await deleteData(`/permission-groups/${oldGroupId}/members/${editing.id}`);
+        }
+      } else {
+        const created = await postData("/employees", form);
+        if (newGroupId) await postData(`/permission-groups/${newGroupId}/members/${created.data.id}`);
+      }
       toast.success(
         editing ? "Đã cập nhật nhân viên" : "Đã tạo tài khoản nhân viên",
       );
@@ -145,11 +168,13 @@ export default function EmployeeManager() {
   const openPermissions = async (item) => {
     setPermissionEmployee(item);
     setPermissionFeatures([]);
+    setPermissionGroupLock(null);
     setPermissionModal(true);
     setPermissionLoading(true);
     try {
       const response = await getData(`/employees/${item.id}/database-permissions`);
       setPermissionFeatures(response.data?.features || []);
+      setPermissionGroupLock(response.data?.group || null);
     } catch (e) {
       setPermissionModal(false);
       toast.error(e.response?.data?.message || "Không thể tải quyền PostgreSQL");
@@ -380,6 +405,24 @@ export default function EmployeeManager() {
               ))}
             </select>
           </label>
+          <label>
+            <span className="mb-1.5 block text-xs font-bold text-slate-600 dark:text-slate-300">
+              Nhóm quyền
+            </span>
+            <select
+              className="form-control"
+              name="permissionGroupId"
+              value={form.permissionGroupId}
+              onChange={change}
+            >
+              <option value="">Không thuộc nhóm (cấp quyền riêng)</option>
+              {groups.map((g) => (
+                <option key={g.id} value={g.id}>
+                  {g.name}
+                </option>
+              ))}
+            </select>
+          </label>
           <div className="mt-3 flex justify-end gap-3 sm:col-span-2">
             <button
               type="button"
@@ -428,27 +471,22 @@ export default function EmployeeManager() {
       >
         {permissionLoading && !permissionFeatures.length ? <LoadingState /> : (
           <div className="space-y-4">
-            <div className="overflow-x-auto rounded-xl border border-slate-200 dark:border-slate-700">
-              <table className="w-full text-sm">
-                <thead className="table-head"><tr><th>Tính năng</th><th>Xem</th><th>Thêm</th><th>Sửa</th><th>Xóa</th></tr></thead>
-                <tbody className="table-body">
-                  {permissionFeatures.map((feature) => (
-                    <tr key={feature.key}>
-                      <td className="font-bold">{feature.label}</td>
-                      {["SELECT", "INSERT", "UPDATE", "DELETE"].map((privilege) => (
-                        <td key={privilege} className="text-center">
-                          {feature.operations.includes(privilege) && <input type="checkbox" checked={Boolean(feature.permissions[privilege])} onChange={() => togglePermission(feature.key, privilege)} title={feature.external?.[privilege] ? "Quyền còn đến từ nguồn khác" : ""} />}
-                        </td>
-                      ))}
-                    </tr>
-                  ))}
-                </tbody>
-              </table>
-            </div>
+            {permissionGroupLock && (
+              <div className="rounded-xl border border-indigo-200 bg-indigo-50 p-3 text-xs text-indigo-800 dark:border-indigo-900 dark:bg-indigo-950/40 dark:text-indigo-200">
+                Quyền của nhân viên này theo nhóm quyền <strong>{permissionGroupLock.name}</strong>. Để thay đổi, hãy sửa nhóm quyền hoặc bỏ nhân viên khỏi nhóm trong màn hình "Nhóm quyền".
+              </div>
+            )}
+            <PermissionMatrix
+              features={permissionFeatures}
+              onToggle={togglePermission}
+              readOnly={Boolean(permissionGroupLock)}
+            />
             <p className="text-xs text-slate-500">Quyền hiệu lực được đọc trực tiếp từ PostgreSQL. Hệ thống sẽ báo lỗi nếu quyền không thể thu hồi do PUBLIC, role kế thừa hoặc quyền sở hữu.</p>
             <div className="flex justify-end gap-3">
               <button type="button" onClick={() => setPermissionModal(false)} className="rounded-xl border px-5 py-2.5">Hủy</button>
-              <button type="button" disabled={permissionLoading} onClick={savePermissions} className="rounded-xl bg-blue-600 px-5 py-2.5 font-bold text-white disabled:opacity-60">{permissionLoading ? "Đang lưu..." : "Lưu quyền"}</button>
+              {!permissionGroupLock && (
+                <button type="button" disabled={permissionLoading} onClick={savePermissions} className="rounded-xl bg-blue-600 px-5 py-2.5 font-bold text-white disabled:opacity-60">{permissionLoading ? "Đang lưu..." : "Lưu quyền"}</button>
+              )}
             </div>
           </div>
         )}
