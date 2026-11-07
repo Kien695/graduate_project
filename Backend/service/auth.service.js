@@ -134,6 +134,8 @@ const registerCustomer = async (input) => {
         `CREATE ROLE ${quoteIdentifier(dbUsername)} LOGIN NOSUPERUSER NOCREATEDB NOCREATEROLE NOINHERIT NOBYPASSRLS PASSWORD ${client.escapeLiteral(input.password)}`,
       );
       await client.query(`GRANT USAGE ON SCHEMA public TO ${quoteIdentifier(dbUsername)}`);
+      await client.query(`GRANT EXECUTE ON FUNCTION public.mac_subject_rank() TO ${quoteIdentifier(dbUsername)}`);
+      await client.query(`GRANT EXECUTE ON FUNCTION public.mac_contract_owned_by_subject(INTEGER, INTEGER) TO ${quoteIdentifier(dbUsername)}`);
       await client.query(
         `GRANT SELECT ON TABLE public.vehicles,public.accessories,public.users,
            public.customers,public.orders,public.contracts,public.accessory_orders,
@@ -498,6 +500,8 @@ const changePassword = (userId, currentPassword, newPassword) =>
           `CREATE ROLE ${quoteIdentifier(dbUsername)} LOGIN NOSUPERUSER NOCREATEDB NOCREATEROLE NOINHERIT NOBYPASSRLS PASSWORD ${client.escapeLiteral(newPassword)}`,
         );
         await client.query(`GRANT USAGE ON SCHEMA public TO ${quoteIdentifier(dbUsername)}`);
+        await client.query(`GRANT EXECUTE ON FUNCTION public.mac_subject_rank() TO ${quoteIdentifier(dbUsername)}`);
+        await client.query(`GRANT EXECUTE ON FUNCTION public.mac_contract_owned_by_subject(INTEGER, INTEGER) TO ${quoteIdentifier(dbUsername)}`);
         await client.query(
           `GRANT SELECT ON TABLE public.vehicles,public.accessories,public.users,
              public.customers,public.orders,public.contracts,public.accessory_orders,

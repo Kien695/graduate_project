@@ -28,6 +28,18 @@ const decryptProfileValue = (value) => {
   return Buffer.concat([decipher.update(encrypted), decipher.final()]).toString("utf8");
 };
 
+// Presentation endpoints must not fail an entire customer list because one
+// legacy value was encrypted with a lost key. Callers can ask the customer to
+// enter that field again; authentication/migration code still uses the strict
+// decryptProfileValue above.
+const tryDecryptProfileValue = (value) => {
+  try {
+    return { value: decryptProfileValue(value), failed: false };
+  } catch (_) {
+    return { value: null, failed: Boolean(value) };
+  }
+};
+
 const emailLookupHash = (email) =>
   crypto
     .createHmac("sha256", getKey())
@@ -58,10 +70,17 @@ const encryptCustomerProfile = (input = {}) => ({
 const decryptCustomerProfile = (row) => {
   if (!row) return row;
   const result = { ...row };
-  result.cccd = decryptProfileValue(result.cccd_encrypted);
-  result.email = decryptProfileValue(result.email_encrypted) || result.email || null;
-  result.phone = decryptProfileValue(result.phone_encrypted) || result.phone || null;
-  result.address = decryptProfileValue(result.address_encrypted) || result.address || null;
+  const cccd = tryDecryptProfileValue(result.cccd_encrypted);
+  const email = tryDecryptProfileValue(result.email_encrypted);
+  const phone = tryDecryptProfileValue(result.phone_encrypted);
+  const address = tryDecryptProfileValue(result.address_encrypted);
+  result.cccd = cccd.value;
+  result.email = email.value || result.email || null;
+  result.phone = phone.value || result.phone || null;
+  result.address = address.value || result.address || null;
+  result.profile_reentry_required = [cccd, email, phone, address].some(
+    (field) => field.failed,
+  );
   delete result.cccd_encrypted;
   delete result.email_encrypted;
   delete result.phone_encrypted;
@@ -72,6 +91,7 @@ const decryptCustomerProfile = (row) => {
 module.exports = {
   encryptProfileValue,
   decryptProfileValue,
+  tryDecryptProfileValue,
   emailLookupHash,
   phoneLookupHash,
   encryptCustomerProfile,

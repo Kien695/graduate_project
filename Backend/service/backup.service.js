@@ -8,7 +8,7 @@ const settings = () => require("./backupSettings.service").get();
 const safeTarget = (config) => ({ database: config.database, host: config.host, port: config.port });
 const removeExpiredFiles = async (retentionDays) => {
   const cutoff = Date.now() - retentionDays * 86400000;
-  const expired = (await postgres.listFiles()).filter((file) =>
+  const expired = (await postgres.listFiles()).filter((file) => file.encrypted === true &&
     (file.stat.birthtimeMs > 0 ? file.stat.birthtimeMs : file.stat.mtimeMs) < cutoff);
   for (const file of expired) await fs.promises.unlink(file.filePath);
   return expired.length;
@@ -18,7 +18,9 @@ const mapFile = (file, retentionDays, config) => {
   return { id: file.name, snapshot_id: file.name, file_name: file.name, created_at: createdAt.toISOString(),
     expires_at: new Date(createdAt.getTime() + retentionDays * 86400000).toISOString(), source_branch_id: null,
     target_branch_id: config.database, target_branch_name: `${config.database}@${config.host}`,
-    status: "completed", size_bytes: file.stat.size, provider: "postgresql_local" };
+    status: "completed", size_bytes: file.stat.size, provider: "postgresql_local",
+    encrypted: file.encrypted === true, encryption_version: file.version || null,
+    legacy_unencrypted: file.legacy === true };
 };
 const list = async () => {
   const retentionDays = Math.max(1, (await settings()).retention_days); const config = postgres.connection();
@@ -32,7 +34,7 @@ const get = async (id) => {
   return record;
 };
 const create = async (userId, ipAddress) => {
-  const name = `autodealer-${new Date().toISOString().replace(/[:.]/g, "-")}.dump`;
+  const name = `autodealer-${new Date().toISOString().replace(/[:.]/g, "-")}.dump.enc`;
   try {
     const result = await postgres.createDump(name);
     const local = await database.query(
@@ -45,23 +47,35 @@ const create = async (userId, ipAddress) => {
       newValues: { fileName: name, sizeBytes: result.stat.size, target: safeTarget(result.config) }, ipAddress }).catch(() => {});
     const retentionDays = Math.max(1, (await settings()).retention_days);
     await removeExpiredFiles(retentionDays);
-    return mapFile({ name, filePath: result.filePath, stat: result.stat }, retentionDays, result.config);
+    return mapFile({
+      name,
+      filePath: result.filePath,
+      stat: result.stat,
+      encrypted: result.encrypted,
+      legacy: result.legacy,
+      version: result.version,
+    }, retentionDays, result.config);
   } catch (error) {
     await database.query("INSERT INTO public.backup_history(file_name,status,completed_at) VALUES($1,'failed',NOW())", [name]).catch(() => {});
     if (error instanceof ErrorHandler) throw error;
     throw new ErrorHandler(`Sao lưu PostgreSQL thất bại: ${error.message}`, 500);
   }
 };
-const restore = async (id, userId, ipAddress) => {
+const restore = async (id, userId, ipAddress, options = {}) => {
   const backup = await get(id);
+  if (backup.legacy_unencrypted && options.allowLegacyUnencrypted !== true)
+    throw new ErrorHandler("Đây là backup .dump cũ chưa mã hóa; phải xác nhận rõ việc phục hồi file legacy", 400);
   await audit.record(null, { userId, action: "POSTGRES_RESTORE_REQUESTED", entityType: "backup", entityId: id,
     newValues: { fileName: backup.file_name }, ipAddress });
   try {
-    const config = await postgres.restoreDump(id);
+    const restored = await postgres.restoreDump(id);
+    const config = restored.config;
     await audit.record(null, { userId, action: "POSTGRES_RESTORE", entityType: "backup", entityId: id,
-      newValues: { fileName: backup.file_name, target: safeTarget(config), restoredAt: new Date().toISOString() }, ipAddress }).catch(() => {});
+      newValues: { fileName: backup.file_name, target: safeTarget(config), restoredAt: new Date().toISOString(),
+        encrypted: restored.encrypted, legacyUnencrypted: restored.legacy }, ipAddress }).catch(() => {});
     return { restored: true, snapshotId: id, targetBranchId: config.database,
-      targetBranchName: `${config.database}@${config.host}` };
+      targetBranchName: `${config.database}@${config.host}`,
+      legacyUnencrypted: restored.legacy };
   } catch (error) {
     await audit.record(null, { userId, action: "POSTGRES_RESTORE_FAILED", entityType: "backup", entityId: id,
       newValues: { error: error.message }, ipAddress }).catch(() => {});

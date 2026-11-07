@@ -22,7 +22,9 @@ const create = catchAsyncError(async (req, res) =>
 const restore = catchAsyncError(async (req, res) => {
   if (req.body.confirm !== true)
     throw new ErrorHandler("Phải xác nhận restore bằng confirm=true", 400);
-  const result = await s.restore(req.params.id, req.user.id, req.ip);
+  const result = await s.restore(req.params.id, req.user.id, req.ip, {
+    allowLegacyUnencrypted: req.body.allowLegacyUnencrypted === true,
+  });
   await require("../service/backupScheduler.service").start();
   return successResponse(
     res,

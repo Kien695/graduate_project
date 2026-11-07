@@ -23,7 +23,8 @@
     "test:avatar-endpoint": "node scripts/testAvatarEndpoint.js",
     "test:refresh-flow": "node scripts/testRefreshFlow.js",
     "test": "echo \"Error: no test specified\" && exit 1",
-    "test:inspection-gate": "node scripts/testInspectionGate.js"
+    "test:inspection-gate": "node scripts/testInspectionGate.js",
+    "test:contract-rls": "node scripts/testContractRls.js"
   },
   "author": "",
   "license": "ISC",

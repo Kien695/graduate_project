@@ -225,12 +225,24 @@ const update = async (employeeId, requested = {}) => withSystemTransaction(async
   }
   const allTables = [...managedTables];
   for (const privilege of PRIVILEGES) {
-    const granted = allTables.filter(
+    let granted = allTables.filter(
       (table) => desired.get(table)?.has(privilege) === true,
     );
     const revoked = allTables.filter(
       (table) => desired.get(table)?.has(privilege) !== true,
     );
+    if (privilege === "UPDATE" && granted.includes("contracts")) {
+      await client.query(`REVOKE UPDATE ON TABLE public.contracts FROM ${role}`);
+      await client.query(
+        `GRANT UPDATE (order_id,customer_id,contract_number,total_amount,status,terms,approved_by,approved_at,signed_at,updated_at) ON TABLE public.contracts TO ${role}`,
+      );
+      granted = granted.filter((table) => table !== "contracts");
+    }
+    // Clearance is security-administration data, never a feature permission.
+    if (privilege === "UPDATE" && granted.includes("users")) {
+      await client.query(`REVOKE UPDATE ON TABLE public.users FROM ${role}`);
+      granted = granted.filter((table) => table !== "users");
+    }
     if (granted.length)
       await client.query(
         `GRANT ${privilege} ON TABLE ${granted.map((table) => `public.${quoteIdentifier(table)}`).join(",")} TO ${role}`,

@@ -6,6 +6,7 @@ const { ErrorHandler } = require("../middleware/errorMiddleware");
 const {
   encryptProfileValue,
   decryptProfileValue,
+  tryDecryptProfileValue,
   emailLookupHash,
   phoneLookupHash,
 } = require("../utils/profileEncryption");
@@ -25,9 +26,13 @@ const getById = async (id, executor = systemDatabase) => {
   if (!rows[0]) throw new ErrorHandler("Khong tim thay nguoi dung", 404);
   const user = rows[0];
   if (String(user.role).toLowerCase() === "customer") {
-    user.email = decryptProfileValue(user.email_encrypted) || user.email;
-    user.phone = decryptProfileValue(user.phone_encrypted) || user.phone;
-    user.address = decryptProfileValue(user.address_encrypted) || user.address;
+    const email = tryDecryptProfileValue(user.email_encrypted);
+    const phone = tryDecryptProfileValue(user.phone_encrypted);
+    const address = tryDecryptProfileValue(user.address_encrypted);
+    user.email = email.value || user.email;
+    user.phone = phone.value || user.phone;
+    user.address = address.value || user.address;
+    user.profile_reentry_required = email.failed || phone.failed || address.failed;
   }
   delete user.email_encrypted;
   delete user.phone_encrypted;

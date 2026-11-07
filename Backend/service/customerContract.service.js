@@ -1,12 +1,12 @@
 const { database, withSystemTransaction } = require("../database/database");
 const { ErrorHandler } = require("../middleware/errorMiddleware");
 const auditLog = require("./auditLog.service");
-const { decryptProfileValue } = require("../utils/profileEncryption");
+const { tryDecryptProfileValue } = require("../utils/profileEncryption");
 
 const presentContract = (contract) => {
-  contract.customer_email =
-    decryptProfileValue(contract.customer_email_encrypted) ||
-    contract.customer_email;
+  const email = tryDecryptProfileValue(contract.customer_email_encrypted);
+  contract.customer_email = email.value || contract.customer_email;
+  contract.profile_reentry_required = email.failed;
   delete contract.customer_email_encrypted;
   return contract;
 };

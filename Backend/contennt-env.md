@@ -28,6 +28,7 @@ DB_PORT=5432
 # PostgreSQL backup/restore (server-side only)
 # DATABASE_URL=postgresql://postgres:password@localhost:5432/graduate_project
 BACKUP_DIR=./backups
+BACKUP_ENCRYPTION_KEY=<base64-cua-32-byte-ngau-nhien>
 # PG_DUMP_PATH=pg_dump
 # PG_RESTORE_PATH=pg_restore
 

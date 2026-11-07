@@ -112,6 +112,8 @@ const create = (input, actor) =>
       ],
     );
     await client.query(`CREATE ROLE ${quoteIdentifier(dbUsername)} LOGIN NOSUPERUSER NOCREATEDB NOCREATEROLE NOINHERIT NOBYPASSRLS PASSWORD ${client.escapeLiteral(password)}`);
+    await client.query(`GRANT EXECUTE ON FUNCTION public.mac_subject_rank() TO ${quoteIdentifier(dbUsername)}`);
+    await client.query(`GRANT EXECUTE ON FUNCTION public.mac_contract_owned_by_subject(INTEGER, INTEGER) TO ${quoteIdentifier(dbUsername)}`);
     const result = await client.query(
       `INSERT INTO employees(user_id,employee_code,full_name,phone,email,position,department)
      VALUES($1,$2,$3,$4,$5,$6,$7) RETURNING id`,
@@ -164,6 +166,8 @@ const update = (id, input, actor) =>
         if (exists.rows[0])
           throw new ErrorHandler("Tên role PostgreSQL đã tồn tại; không tự động liên kết role có sẵn", 409);
         await client.query(`CREATE ROLE ${quoteIdentifier(dbUsername)} LOGIN NOSUPERUSER NOCREATEDB NOCREATEROLE NOINHERIT NOBYPASSRLS PASSWORD ${client.escapeLiteral(input.password)}`);
+        await client.query(`GRANT EXECUTE ON FUNCTION public.mac_subject_rank() TO ${quoteIdentifier(dbUsername)}`);
+        await client.query(`GRANT EXECUTE ON FUNCTION public.mac_contract_owned_by_subject(INTEGER, INTEGER) TO ${quoteIdentifier(dbUsername)}`);
       } else {
         await client.query(`ALTER ROLE ${quoteIdentifier(dbUsername)} PASSWORD ${client.escapeLiteral(input.password)}`);
       }

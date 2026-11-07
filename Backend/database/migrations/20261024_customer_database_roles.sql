@@ -62,16 +62,10 @@ CREATE POLICY customer_orders_isolation ON public.orders
   USING (public.current_customer_user_id() IS NULL OR customer_id = public.current_customer_id());
 
 DROP POLICY IF EXISTS customer_contracts_isolation ON public.contracts;
-CREATE POLICY customer_contracts_isolation ON public.contracts
-  USING (
-    public.current_customer_user_id() IS NULL
-    OR customer_id = public.current_customer_id()
-    OR EXISTS (
-      SELECT 1 FROM public.orders o
-      WHERE o.id = contracts.order_id
-        AND o.customer_id = public.current_customer_id()
-    )
-  );
+-- Contract ownership and MAC are enforced together by
+-- 20261106_contract_mac_rls.sql. Do not recreate the former permissive policy:
+-- for non-customer roles current_customer_user_id() is NULL, which made its
+-- first OR branch true and bypassed the MAC SELECT policy.
 
 DROP POLICY IF EXISTS customer_accessory_orders_isolation ON public.accessory_orders;
 CREATE POLICY customer_accessory_orders_isolation ON public.accessory_orders

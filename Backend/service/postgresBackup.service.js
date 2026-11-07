@@ -2,6 +2,7 @@ const fs = require("fs");
 const path = require("path");
 const { spawn } = require("child_process");
 const { ErrorHandler } = require("../middleware/errorMiddleware");
+const encryption = require("./backupEncryption.service");
 
 const backupDirectory = () => {
   const configured = process.env.BACKUP_DIR;
@@ -108,7 +109,7 @@ const ensureDirectory = async () => {
   await fs.promises.mkdir(directory, { recursive: true });
   return directory;
 };
-const isBackupName = (name) => /^autodealer-[A-Za-z0-9._-]+\.dump$/.test(name);
+const isBackupName = (name) => /^(?:autodealer|backup)-[A-Za-z0-9._-]+\.dump(?:\.enc)?$/.test(name);
 const resolveBackup = async (id) => {
   if (!isBackupName(id) || path.basename(id) !== id)
     throw new ErrorHandler("Mã bản sao lưu không hợp lệ", 400);
@@ -128,7 +129,7 @@ const listFiles = async () => {
     names.filter(isBackupName).map(async (name) => {
       const filePath = path.join(directory, name);
       const stat = await fs.promises.stat(filePath);
-      return stat.isFile() ? { name, filePath, stat } : null;
+      return stat.isFile() ? { name, filePath, stat, ...(await encryption.inspectFile(filePath)) } : null;
     }),
   );
   return files.filter(Boolean);
@@ -136,9 +137,13 @@ const listFiles = async () => {
 const createDump = async (name) => {
   const directory = await ensureDirectory();
   const finalPath = path.join(directory, name);
-  const temporaryPath = `${finalPath}.tmp`;
+  const encryptedTemporaryPath = `${finalPath}.tmp`;
+  const plaintextTemporaryPath = path.join(directory, `.${name}.${process.pid}.${Date.now()}.dump.tmp`);
   const config = connection();
   try {
+    // Validate before pg_dump: never create a plaintext backup when encryption
+    // is missing or misconfigured.
+    encryption.encryptionKey().fill(0);
     await run(
       process.env.PG_DUMP_PATH || "pg_dump",
       [
@@ -147,38 +152,51 @@ const createDump = async (name) => {
         "--no-owner",
         "--no-privileges",
         "--file",
-        temporaryPath,
+        plaintextTemporaryPath,
       ],
       config,
     );
-    await fs.promises.rename(temporaryPath, finalPath);
+    await encryption.encryptFile(plaintextTemporaryPath, encryptedTemporaryPath);
+    await fs.promises.rename(encryptedTemporaryPath, finalPath);
     return {
       filePath: finalPath,
       stat: await fs.promises.stat(finalPath),
       config,
+      encrypted: true,
+      legacy: false,
+      version: 1,
     };
   } catch (error) {
-    await fs.promises.unlink(temporaryPath).catch(() => {});
+    await fs.promises.unlink(encryptedTemporaryPath).catch(() => {});
     throw error;
+  } finally {
+    await fs.promises.unlink(plaintextTemporaryPath).catch(() => {});
   }
 };
 const restoreDump = async (id) => {
   const { filePath } = await resolveBackup(id);
   const config = connection();
-  await run(
-    process.env.PG_RESTORE_PATH || "pg_restore",
-    [
-      ...databaseArgs(config),
-      "--clean",
-      "--if-exists",
-      "--no-owner",
-      "--no-privileges",
-      "--exit-on-error",
-      filePath,
-    ],
-    config,
-  );
-  return config;
+  const format = await encryption.inspectFile(filePath);
+  const temporaryPath = `${filePath}.${process.pid}.${Date.now()}.restore.tmp`;
+  try {
+    if (format.encrypted) await encryption.decryptFile(filePath, temporaryPath);
+    await run(
+      process.env.PG_RESTORE_PATH || "pg_restore",
+      [
+        ...databaseArgs(config),
+        "--clean",
+        "--if-exists",
+        "--no-owner",
+        "--no-privileges",
+        "--exit-on-error",
+        format.encrypted ? temporaryPath : filePath,
+      ],
+      config,
+    );
+    return { config, ...format };
+  } finally {
+    await fs.promises.unlink(temporaryPath).catch(() => {});
+  }
 };
 module.exports = {
   backupDirectory,

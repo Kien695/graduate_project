@@ -1,43 +1,60 @@
 # Chính sách MAC của hợp đồng
 
-Nhãn bắt buộc trên `users.security_level_id` và `contracts.security_level_id`:
-PUBLIC (0) < INTERNAL (1) < CONFIDENTIAL (2) < RESTRICTED (3).
-Backend đọc nhãn hiện tại từ database; quyền không được lấy từ nhãn cũ trong token.
-Thiếu nhãn hợp lệ bị từ chối. Category cũ chỉ là dữ liệu lưu lại, không tham gia phân quyền.
+## Nhãn và thứ tự
 
-## Quyền truy cập
+Nguồn duy nhất là `security_levels.rank`:
 
-Điều kiện MAC: rank người dùng >= rank hợp đồng. API danh sách lọc theo cùng điều
-kiện với chi tiết. Khách còn phải sở hữu hợp đồng qua orders.customer_id và
-customers.user_id; chỉ thấy APPROVED, SIGNED, COMPLETED. Hợp đồng không được phép
-truy cập trả 404 ở API khách hàng để không tiết lộ sự tồn tại.
+`PUBLIC (0) < INTERNAL (1) < CONFIDENTIAL (2) < RESTRICTED (3)`.
 
-| Thao tác | Vai trò / điều kiện bổ sung |
-| --- | --- |
-| Tạo hợp đồng | ADMIN, MANAGER, STAFF; nhãn mới không vượt mức người tạo |
-| Sửa nội dung, ghi nhận thanh toán | ADMIN, MANAGER, STAFF; đạt MAC và điều kiện trạng thái nghiệp vụ |
-| Duyệt | ADMIN, MANAGER; đạt MAC; DRAFT -> APPROVED |
-| Khách xác nhận | Đúng chủ, đạt MAC; APPROVED -> SIGNED |
-| Đổi nhãn hợp đồng | ADMIN; đạt MAC với cả nhãn cũ và mới; lưu nhật ký trước/sau |
-| Đổi nhãn người dùng | ADMIN; nhãn hợp lệ; lưu nhật ký trước/sau |
+Clearance của chủ thể nằm ở `users.security_level_id`; classification của hợp
+đồng nằm ở `contracts.security_level_id`. User thiếu nhãn được gán PUBLIC; hợp
+đồng cũ thiếu nhãn được gán RESTRICTED để không vô tình công bố dữ liệu.
 
-Admin là người quản trị nhãn tin cậy. Việc hạ nhãn là quyết định công bố dữ liệu
-được ghi audit; không tự hạ nhãn khi duyệt hoặc thanh toán. Khách PUBLIC mất quyền
-ngay ở yêu cầu API tiếp theo khi hợp đồng được nâng lên INTERNAL; dữ liệu đã xem
-trước đó không thể bị thu hồi khỏi thiết bị.
+## Thực thi trong PostgreSQL
 
-Đây là chính sách MAC theo mức kết hợp RBAC và quyền sở hữu cho nghiệp vụ.
-Không tuyên bố triển khai đầy đủ Bell–LaPadula/no-write-down: việc ghi nghiệp vụ
-được cho phép theo vai trò và điều kiện MAC nêu trên.
+Migration `20261106_contract_mac_rls.sql` bật và `FORCE ROW LEVEL SECURITY` trên
+`contracts`. PostgreSQL nhận diện chủ thể bằng `session_user`, ánh xạ tới
+`users.db_user`; user id hay clearance do client gửi không được policy tin cậy.
+
+- SELECT: không đọc lên (`subject.rank >= object.rank`). Customer còn phải sở hữu hợp đồng.
+- INSERT: không ghi xuống (`object.rank >= subject.rank`).
+- UPDATE: nhãn hàng cũ và mới đều phải tuân thủ không ghi xuống.
+- DELETE: hàng bị xóa phải tuân thủ không ghi xuống.
+
+Role nghiệp vụ là LOGIN role `NOSUPERUSER NOBYPASSRLS`, không sở hữu bảng.
+`contract_security_admin` là NOLOGIN role riêng cho đường quản lý nhãn. Chỉ API
+ADMIN được đổi classification; việc đổi nhãn chạy qua system/security-admin
+transaction và được ghi audit. Người dùng thường bị thu hồi quyền UPDATE cột
+`security_level_id` trên cả `users` và `contracts`.
+
+Các hàm trong policy là `SECURITY DEFINER`, cố định `search_path` thành
+`pg_catalog, public`, thu hồi EXECUTE khỏi PUBLIC và chỉ cấp cho từng DB login.
+`FORCE RLS` không chặn PostgreSQL superuser; không dùng superuser/BYPASSRLS làm
+tài khoản truy vấn nghiệp vụ.
 
 ## Migration và kiểm tra
 
-`npm run db:migrate` chạy schema rồi migration `20260909_mac_four_levels.sql`.
-Nhãn SECRET/TOP_SECRET cũ được chuyển sang CONFIDENTIAL/RESTRICTED.
-Người dùng chưa có nhãn nhận PUBLIC; hợp đồng chưa có nhãn nhận RESTRICTED
-để tránh vô tình công bố. Đăng ký khách mới luôn gán PUBLIC ở phía server.
-Không chạy lại migration category cũ hoặc backfill category cho mô hình này.
+Từ thư mục `Backend`, chạy migration trên môi trường đích đã chọn rõ ràng:
 
-Chạy `node scripts/testMacLevels.js` trên database phát triển có ít nhất một hợp
-đồng khách hàng. Kiểm tra 16 cặp mức, quyền sở hữu, trạng thái và xác nhận; tất cả
-thay đổi kiểm tra được rollback. Chạy `npm run check` để kiểm tra cú pháp Backend.
+```powershell
+npm.cmd run db:migrate
+```
+
+Không tự động chạy lệnh này lên production. Migration giữ nguyên bảng và dữ liệu.
+
+```powershell
+$env:RLS_TEST_DB_PASSWORD = '<password-của-role-thử-nghiệm>'
+npm.cmd run test:contract-rls
+```
+
+Hoặc đăng nhập trực tiếp bằng role của userA rồi chạy:
+
+```sql
+SELECT session_user, public.mac_subject_rank();
+SELECT c.id, sl.name
+FROM public.contracts c
+JOIN public.security_levels sl ON sl.id = c.security_level_id;
+```
+
+Khi userA ở PUBLIC, kết quả không chứa hợp đồng INTERNAL; truy vấn theo đúng id
+của hợp đồng đó trả 0 hàng.

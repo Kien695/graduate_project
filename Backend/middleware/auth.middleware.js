@@ -47,10 +47,12 @@ const auth = catchAsyncError(async (req, res, next) => {
   req.user = user;
   req.user.role = req.user.role?.toLowerCase();
   const useCustomerDatabase =
-    req.user.role === "customer" &&
-    Boolean(req.user.db_user) &&
-    customerDatabaseRoutes.has(req.baseUrl);
-  if (req.user.role === "staff" || useCustomerDatabase) {
+    req.user.role === "customer" && customerDatabaseRoutes.has(req.baseUrl);
+  // Every business query made for an account with a PostgreSQL login must run
+  // as that login. Falling back to the owner pool would bypass RLS.
+  const useSubjectDatabase = Boolean(req.user.db_user) &&
+    (req.user.role !== "customer" || useCustomerDatabase);
+  if (useSubjectDatabase) {
     const pool = databaseSessions.get(decoded.sessionId);
     if (!pool)
       return next(new ErrorHandler("Phiên cơ sở dữ liệu đã mất, vui lòng đăng nhập lại", 401));

@@ -1,7 +1,7 @@
-const { database, withTransaction } = require("../database/database");
+const { database, withTransaction, withSystemTransaction } = require("../database/database");
 const { ErrorHandler } = require("../middleware/errorMiddleware");
 const auditLog = require("./auditLog.service");
-const { decryptProfileValue } = require("../utils/profileEncryption");
+const { tryDecryptProfileValue } = require("../utils/profileEncryption");
 const notification = require("./notification.service");
 
 const list = async (user) => {
@@ -42,12 +42,11 @@ const get = async (id) => {
     [id],
   );
   if (!rows[0]) throw new ErrorHandler("Không tìm thấy hợp đồng", 404);
-  rows[0].customer_email =
-    decryptProfileValue(rows[0].customer_email_encrypted) ||
-    rows[0].customer_email;
-  rows[0].customer_phone =
-    decryptProfileValue(rows[0].customer_phone_encrypted) ||
-    rows[0].customer_phone;
+  const email = tryDecryptProfileValue(rows[0].customer_email_encrypted);
+  const phone = tryDecryptProfileValue(rows[0].customer_phone_encrypted);
+  rows[0].customer_email = email.value || rows[0].customer_email;
+  rows[0].customer_phone = phone.value || rows[0].customer_phone;
+  rows[0].profile_reentry_required = email.failed || phone.failed;
   delete rows[0].customer_email_encrypted;
   delete rows[0].customer_phone_encrypted;
   const payments = await database.query(
@@ -152,10 +151,7 @@ const setStatus = (id, status, user, ipAddress) =>
       ? status
       : null;
     if (!safeStatus)
-      throw new ErrorHandler(
-        "Trạng thái hợp đồng không hợp lệ",
-        400,
-      );
+      throw new ErrorHandler("Trạng thái hợp đồng không hợp lệ", 400);
     const { rows } = await client.query(
       `UPDATE contracts SET status='${safeStatus}',approved_by=CASE WHEN $3 THEN $2 ELSE approved_by END,
     approved_at=CASE WHEN $3 THEN NOW() ELSE approved_at END,signed_at=CASE WHEN $4 THEN NOW() ELSE signed_at END,updated_at=NOW()
@@ -218,14 +214,11 @@ const addPayment = (id, input, user, ipAddress) =>
     );
     const inspected = insp.rows[0]?.status?.toLowerCase() === "passed";
     if (!inspected)
-      throw new ErrorHandler(
-        "Xe phải kiểm định đạt trước khi thanh toán",
-        409,
-      );
+      throw new ErrorHandler("Xe phải kiểm định đạt trước khi thanh toán", 409);
 
     if (
       Number(paid.rows[0].total) + Number(input.amount) ===
-        Number(contract.rows[0].total_amount)
+      Number(contract.rows[0].total_amount)
     )
       await client.query(
         "UPDATE contracts SET status='completed',updated_at=NOW() WHERE id=$1",
@@ -244,7 +237,7 @@ const addPayment = (id, input, user, ipAddress) =>
 
 // Classification is validated by the MAC middleware.
 const setSecurityLevel = (id, classification, user, ipAddress) =>
-  withTransaction(async (client) => {
+  withSystemTransaction(async (client) => {
     if (!classification)
       throw new ErrorHandler("Thieu ngu canh phan loai MAC", 500);
 

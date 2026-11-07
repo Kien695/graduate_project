@@ -60,7 +60,10 @@ export default function BackupPage() {
     run(async () => {
       await postData(
         `/backups/${selected.id}/restore`,
-        { confirm: true },
+        {
+          confirm: true,
+          allowLegacyUnencrypted: selected.legacy_unencrypted === true,
+        },
         { timeout: 0 },
       );
       setSelected(null);
@@ -275,6 +278,12 @@ export default function BackupPage() {
               đã chọn. Các thay đổi sau thời điểm đó sẽ mất. Hãy dừng thao tác của
               người dùng và tạo bản sao mới trước khi tiếp tục.
             </p>
+            {selected.legacy_unencrypted && (
+              <p className="rounded-lg bg-amber-50 p-3 text-amber-800">
+                Cảnh báo: đây là file .dump cũ chưa mã hóa. Backend sẽ phục hồi
+                trực tiếp file legacy này; các backup mới luôn được mã hóa.
+              </p>
+            )}
             <label className="block">
               Nhập PHUC HOI để xác nhận
               <input
