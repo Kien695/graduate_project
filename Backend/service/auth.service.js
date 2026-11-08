@@ -362,6 +362,14 @@ const login = async (input) => {
       "UPDATE users SET failed_login_attempts=0,locked_until=NULL,last_login_at=NOW() WHERE id=$1",
       [user.id],
     );
+    const permissionGroup = await client.query(
+      `SELECT LOWER(pg.name) permission_group_name,e.position
+       FROM employees e LEFT JOIN permission_groups pg ON pg.id=e.permission_group_id
+       WHERE e.user_id=$1`,
+      [user.id],
+    );
+    user.permission_group_name = permissionGroup.rows[0]?.permission_group_name || null;
+    user.position = permissionGroup.rows[0]?.position || null;
     const deviceType = normalizeDeviceType(input.deviceType, input.userAgent);
     if (user.role === "customer") {
       const revoked = await client.query(

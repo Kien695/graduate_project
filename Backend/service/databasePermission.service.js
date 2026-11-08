@@ -47,12 +47,14 @@ const FEATURES = Object.freeze({
       "users",
       "audit_logs",
       "inspections",
+      "contract_workflow_history",
     ],
     supportPrivileges: {
       INSERT: [{ table: "audit_logs", privilege: "INSERT" }],
       UPDATE: [
         { table: "audit_logs", privilege: "INSERT" },
         { table: "notifications", privilege: "INSERT" },
+        { table: "contract_workflow_history", privilege: "INSERT" },
       ],
       DELETE: [
         { table: "audit_logs", privilege: "INSERT" },
@@ -234,7 +236,7 @@ const update = async (employeeId, requested = {}) => withSystemTransaction(async
     if (privilege === "UPDATE" && granted.includes("contracts")) {
       await client.query(`REVOKE UPDATE ON TABLE public.contracts FROM ${role}`);
       await client.query(
-        `GRANT UPDATE (order_id,customer_id,contract_number,total_amount,status,terms,approved_by,approved_at,signed_at,updated_at) ON TABLE public.contracts TO ${role}`,
+        `GRANT UPDATE (order_id,customer_id,contract_number,total_amount,status,terms,approved_by,approved_at,signed_at,updated_at,created_by,submitted_at,signed_by,decision_reason,decision_by,decision_at) ON TABLE public.contracts TO ${role}`,
       );
       granted = granted.filter((table) => table !== "contracts");
     }

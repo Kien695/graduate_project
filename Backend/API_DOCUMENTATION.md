@@ -186,7 +186,7 @@ Danh sách hỗ trợ query `page`, `limit`, `search` và `status`.
 | GET | `/api/orders/my-orders` | Đã đăng nhập | Đơn hàng của người dùng |
 | GET | `/api/orders/:id` | Đã đăng nhập | Chi tiết đơn |
 | PUT | `/api/orders/:id` | Admin/Manager/Staff | Cập nhật ghi chú |
-| POST | `/api/orders/:id/confirm` | Admin/Manager/Staff | Xác nhận đơn |
+| POST | `/api/orders/:id/confirm` | Nhóm `nhanvien` + phạm vi DB/MAC hiện có | Xác nhận đơn đang `pending` |
 | POST | `/api/orders/:id/cancel` | Đã đăng nhập | Hủy đơn |
 | POST | `/api/orders/:id/complete` | Admin/Manager/Staff | Hoàn tất đơn |
 
@@ -209,8 +209,11 @@ Khi tạo đơn, service khóa bản ghi xe trong transaction. Xe phải có tr�
 | POST | `/api/contracts` | Admin/Manager/Staff | Tạo hợp đồng |
 | PUT | `/api/contracts/:id` | Admin/Manager/Staff + MAC | Cập nhật hợp đồng |
 | DELETE | `/api/contracts/:id` | Admin/Manager | Hủy hợp đồng |
-| POST | `/api/contracts/:id/approve` | Admin/Manager | Duyệt hợp đồng |
-| POST | `/api/contracts/:id/sign` | Đã đăng nhập + MAC | Ký hợp đồng |
+| POST | `/api/contracts/:id/submit` | Nhóm `nhanvien` + chủ sở hữu + MAC | Gửi trưởng phòng duyệt |
+| POST | `/api/contracts/:id/approve` | Nhóm `truongnhom` + MAC | Duyệt sang chờ giám đốc ký |
+| POST | `/api/contracts/:id/return` | Nhóm `truongnhom` + MAC | Trả lại (bắt buộc `reason`) |
+| POST | `/api/contracts/:id/reject` | Nhóm `truongnhom`/`giamdoc` + MAC | Từ chối tại đúng bước (bắt buộc `reason`) |
+| POST | `/api/contracts/:id/sign` | Nhóm `giamdoc` + MAC | Ký hợp đồng đã được trưởng nhóm duyệt |
 | POST | `/api/contracts/:id/payment` | Admin/Manager/Staff + MAC | Thanh toán |
 | GET | `/api/contracts/:id/audit-logs` | Đã đăng nhập + MAC | Lịch sử hợp đồng |
 | PATCH | `/api/contracts/:id/security-level` | Admin | Gán nhãn bảo mật |

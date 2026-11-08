@@ -1,6 +1,7 @@
 const { database, withTransaction } = require("../database/database");
 const { ErrorHandler } = require("../middleware/errorMiddleware");
 const notification = require("./notification.service");
+const { GROUPS } = require("../middleware/contractWorkflow.middleware");
 const list = async (user) => {
   const own = user.role === "customer";
   const { rows } = await database.query(
@@ -57,8 +58,10 @@ const create = (input, user) =>
     );
     return rows[0];
   });
-const transition = (id, status, user) =>
+const transition = (id, status, user, actor) =>
   withTransaction(async (c) => {
+    if (status === "confirmed" && actor?.group !== GROUPS.EMPLOYEE)
+      throw new ErrorHandler("Chỉ nhóm nhân viên được xác nhận đơn hàng", 403);
     const o = await c.query("SELECT * FROM orders WHERE id=$1 FOR UPDATE", [
       id,
     ]);
@@ -115,8 +118,11 @@ const transition = (id, status, user) =>
     }
 
     const { rows } = await c.query(
-      "UPDATE orders SET status=$2,updated_at=NOW() WHERE id=$1 RETURNING *",
-      [id, status],
+      `UPDATE orders SET status=$2,
+       confirmed_by=CASE WHEN $4::boolean THEN $3 ELSE confirmed_by END,
+       confirmed_at=CASE WHEN $4::boolean THEN NOW() ELSE confirmed_at END,
+       updated_at=NOW() WHERE id=$1 RETURNING *`,
+      [id, status, user.id, status === "confirmed"],
     );
     await c.query(
       "UPDATE vehicles SET status=$2,updated_at=NOW() WHERE id=$1",

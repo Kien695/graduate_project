@@ -19,8 +19,13 @@ const getById = async (id, executor = systemDatabase) => {
   const { rows } = await executor.query(
     `SELECT u.id,u.email,u.email_encrypted,u.full_name,u.phone,u.phone_encrypted,
        u.avatar_url,u.avatar_public_id,u.role,u.security_level_id,u.is_locked,u.is_active,u.last_login_at,
-       u.created_at,u.updated_at,c.address,c.address_encrypted
-     FROM users u LEFT JOIN customers c ON c.user_id=u.id WHERE u.id=$1`,
+       u.created_at,u.updated_at,c.address,c.address_encrypted,
+       LOWER(pg.name) permission_group_name,e.position
+     FROM users u
+     LEFT JOIN customers c ON c.user_id=u.id
+     LEFT JOIN employees e ON e.user_id=u.id
+     LEFT JOIN permission_groups pg ON pg.id=e.permission_group_id
+     WHERE u.id=$1`,
     [id],
   );
   if (!rows[0]) throw new ErrorHandler("Khong tim thay nguoi dung", 404);

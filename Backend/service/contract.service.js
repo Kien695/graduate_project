@@ -3,12 +3,17 @@ const { ErrorHandler } = require("../middleware/errorMiddleware");
 const auditLog = require("./auditLog.service");
 const { tryDecryptProfileValue } = require("../utils/profileEncryption");
 const notification = require("./notification.service");
+const { GROUPS } = require("../middleware/contractWorkflow.middleware");
+const CONTRACT_GROUPS = new Set(Object.values(GROUPS));
 
 const list = async (user) => {
+  if (user.role !== "admin" && !CONTRACT_GROUPS.has(user.contractActor?.group))
+    throw new ErrorHandler("Tài khoản chưa thuộc nhóm quyền hợp đồng hợp lệ", 403);
   const values = [user.id];
+  const ownScope = user.contractActor?.group === GROUPS.EMPLOYEE ? " AND c.created_by=$1" : "";
   const access = `WHERE sl.rank <= (
     SELECT us.rank FROM users ux JOIN security_levels us ON us.id=ux.security_level_id WHERE ux.id=$1
-  )`;
+  )${ownScope}`;
   const { rows } = await database.query(
     `SELECT c.*,o.customer_id,o.vehicle_id,o.total_amount order_total_amount,
     cu.full_name customer_name,v.brand vehicle_brand,v.model vehicle_model,v.vin,
@@ -24,7 +29,19 @@ const list = async (user) => {
   return rows;
 };
 
-const get = async (id) => {
+const capabilities = (actor) => ({
+  group: actor?.group || null,
+  canCreate: actor?.group === GROUPS.EMPLOYEE,
+  canSubmit: actor?.group === GROUPS.EMPLOYEE,
+  canApprove: actor?.group === GROUPS.LEADER,
+  canReturn: actor?.group === GROUPS.LEADER,
+  canReject: [GROUPS.LEADER, GROUPS.DIRECTOR].includes(actor?.group),
+  canSign: actor?.group === GROUPS.DIRECTOR,
+});
+
+const get = async (id, user, actor) => {
+  if (user.role !== "admin" && !CONTRACT_GROUPS.has(actor?.group))
+    throw new ErrorHandler("Tài khoản chưa thuộc nhóm quyền hợp đồng hợp lệ", 403);
   const { rows } = await database.query(
     `SELECT c.*,o.customer_id,o.vehicle_id,o.total_amount order_total_amount,
     cu.full_name customer_name,cu.email customer_email,cu.phone customer_phone,
@@ -42,6 +59,8 @@ const get = async (id) => {
     [id],
   );
   if (!rows[0]) throw new ErrorHandler("Không tìm thấy hợp đồng", 404);
+  if (actor?.group === GROUPS.EMPLOYEE && Number(rows[0].created_by) !== Number(user.id))
+    throw new ErrorHandler("Bạn chỉ được xem hợp đồng do mình tạo", 403);
   const email = tryDecryptProfileValue(rows[0].customer_email_encrypted);
   const phone = tryDecryptProfileValue(rows[0].customer_phone_encrypted);
   rows[0].customer_email = email.value || rows[0].customer_email;
@@ -53,7 +72,10 @@ const get = async (id) => {
     `SELECT p.*,u.full_name created_by_name FROM payments p LEFT JOIN users u ON u.id=p.created_by WHERE p.contract_id=$1 ORDER BY p.paid_at DESC`,
     [id],
   );
-  return { ...rows[0], payments: payments.rows };
+  const history = await database.query(
+    `SELECT h.*,u.full_name performed_by_name FROM contract_workflow_history h
+     LEFT JOIN users u ON u.id=h.performed_by WHERE h.contract_id=$1 ORDER BY h.created_at DESC`, [id]);
+  return { ...rows[0], payments: payments.rows, workflow_history: history.rows };
 };
 
 // Classification is validated by the MAC middleware.
@@ -75,8 +97,8 @@ const create = (input, classification, user, ipAddress) =>
     const number = input.contract_number || `HD-${Date.now()}`;
     const { rows } = await client.query(
       `INSERT INTO contracts(order_id, customer_id, contract_number, total_amount, terms,
-     security_level_id, status)
-   VALUES($1,$2,$3,$4,$5,$6,'draft') RETURNING *`,
+     security_level_id, status, created_by)
+   VALUES($1,$2,$3,$4,$5,$6,'draft',$7) RETURNING *`,
       [
         input.order_id,
         order.rows[0].customer_id,
@@ -84,6 +106,7 @@ const create = (input, classification, user, ipAddress) =>
         order.rows[0].total_amount,
         input.terms || null,
         classification.levelId,
+        user.id,
       ],
     );
     await auditLog.record(client, {
@@ -97,14 +120,16 @@ const create = (input, classification, user, ipAddress) =>
     return rows[0];
   });
 
-const update = (id, input, user, ipAddress) =>
+const update = (id, input, user, actor, ipAddress) =>
   withTransaction(async (client) => {
     const old = await client.query(
       "SELECT * FROM contracts WHERE id=$1 FOR UPDATE",
       [id],
     );
     if (!old.rows[0]) throw new ErrorHandler("Không tìm thấy hợp đồng", 404);
-    if (!["draft", "approved"].includes(old.rows[0].status))
+    if (actor?.group !== GROUPS.EMPLOYEE || Number(old.rows[0].created_by) !== Number(user.id))
+      throw new ErrorHandler("Bạn chỉ được sửa hợp đồng do mình tạo", 403);
+    if (!["draft", "revision_requested"].includes(String(old.rows[0].status).toLowerCase()))
       throw new ErrorHandler(
         "Không thể sửa hợp đồng ở trạng thái hiện tại",
         409,
@@ -131,7 +156,7 @@ const update = (id, input, user, ipAddress) =>
     return rows[0];
   });
 
-const setStatus = (id, status, user, ipAddress) =>
+const legacySetStatus = (id, status, user, ipAddress) =>
   withTransaction(async (client) => {
     const old = await client.query(
       "SELECT * FROM contracts WHERE id=$1 FOR UPDATE",
@@ -173,6 +198,51 @@ const setStatus = (id, status, user, ipAddress) =>
       type: "CONTRACT",
       referenceId: Number(id),
     });
+    return rows[0];
+  });
+
+const transition = (id, action, reason, user, actor, ipAddress) =>
+  withTransaction(async (client) => {
+    const old = await client.query("SELECT * FROM contracts WHERE id=$1 FOR UPDATE", [id]);
+    if (!old.rows[0]) throw new ErrorHandler("Không tìm thấy hợp đồng", 404);
+    const rules = {
+      submit: { groups: [GROUPS.EMPLOYEE], from: ["draft", "revision_requested"], to: "pending_manager" },
+      approve: { groups: [GROUPS.LEADER], from: ["pending_manager"], to: "pending_director" },
+      return: { groups: [GROUPS.LEADER], from: ["pending_manager"], to: "revision_requested", reason: true },
+      reject: { groups: [GROUPS.LEADER, GROUPS.DIRECTOR], from: actor?.group === GROUPS.DIRECTOR ? ["pending_director"] : ["pending_manager"], to: "rejected", reason: true },
+      sign: { groups: [GROUPS.DIRECTOR], from: ["pending_director"], to: "signed" },
+    };
+    const rule = rules[action];
+    if (!rule || !rule.groups.includes(actor?.group))
+      throw new ErrorHandler("Nhóm quyền không được thực hiện thao tác này", 403);
+    if (action === "submit" && Number(old.rows[0].created_by) !== Number(user.id))
+      throw new ErrorHandler("Bạn chỉ được gửi hợp đồng do mình tạo", 403);
+    if (!rule.from.includes(String(old.rows[0].status).toLowerCase()))
+      throw new ErrorHandler("Trạng thái hợp đồng không phù hợp với thao tác", 409);
+    const cleanReason = String(reason || "").trim();
+    if (rule.reason && !cleanReason) throw new ErrorHandler("Lý do là bắt buộc", 400);
+    const { rows } = await client.query(
+      `UPDATE contracts SET status=$2,
+       submitted_at=CASE WHEN $3='submit' THEN NOW() ELSE submitted_at END,
+       approved_by=CASE WHEN $3='approve' THEN $4 ELSE approved_by END,
+       approved_at=CASE WHEN $3='approve' THEN NOW() ELSE approved_at END,
+       signed_by=CASE WHEN $3='sign' THEN $4 ELSE signed_by END,
+       signed_at=CASE WHEN $3='sign' THEN NOW() ELSE signed_at END,
+       decision_reason=CASE WHEN $3 IN ('return','reject') THEN $5 ELSE NULL END,
+       decision_by=CASE WHEN $3 IN ('return','reject') THEN $4 ELSE decision_by END,
+       decision_at=CASE WHEN $3 IN ('return','reject') THEN NOW() ELSE decision_at END,
+       updated_at=NOW() WHERE id=$1 RETURNING *`,
+      [id, rule.to, action, user.id, cleanReason || null]);
+    await client.query(
+      `INSERT INTO contract_workflow_history(contract_id,from_status,to_status,action,reason,performed_by)
+       VALUES($1,$2,$3,$4,$5,$6)`,
+      [id, old.rows[0].status, rule.to, action, cleanReason || null, user.id]);
+    await auditLog.record(client, { userId: user.id, action: `CONTRACT_${action.toUpperCase()}`,
+      entityType: "contract", entityId: id, oldValues: old.rows[0], newValues: rows[0], ipAddress });
+    await notification.createForCustomer(client, old.rows[0].customer_id, {
+      title: "Trạng thái hợp đồng đã thay đổi",
+      message: `Hợp đồng ${rows[0].contract_number} đã chuyển sang trạng thái ${rule.to}.`,
+      type: "CONTRACT", referenceId: Number(id) });
     return rows[0];
   });
 
@@ -270,10 +340,11 @@ const setSecurityLevel = (id, classification, user, ipAddress) =>
 
 module.exports = {
   list,
+  capabilities,
   get,
   create,
   update,
-  setStatus,
+  transition,
   addPayment,
   setSecurityLevel,
 };

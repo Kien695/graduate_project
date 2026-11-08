@@ -7,37 +7,37 @@ const {
   enforceContractSecurityChange,
 } = require("../middleware/mac.middleware");
 const r = express.Router();
+const { GROUPS, loadContractGroup, requireGroup } = require("../middleware/contractWorkflow.middleware");
 r.use(auth);
+r.use(loadContractGroup);
+r.get("/capabilities", c.capabilities);
 r.get("/", authorize("admin", "manager", "staff"), c.list);
 r.post(
   "/",
-  authorize("admin", "manager", "staff"),
+  requireGroup(GROUPS.EMPLOYEE),
   enforceContractCreate,
   c.create,
 );
 r.get("/:id", enforceContractAccess, c.get);
 r.put(
   "/:id",
-  authorize("admin", "manager", "staff"),
+  requireGroup(GROUPS.EMPLOYEE),
   enforceContractAccess,
   c.update,
 );
-r.delete(
-  "/:id",
-  authorize("admin", "manager", "staff"),
-  enforceContractAccess,
-  c.remove,
-);
+r.post("/:id/submit", requireGroup(GROUPS.EMPLOYEE), enforceContractAccess, c.submit);
 r.post(
   "/:id/approve",
-  authorize("admin", "manager"),
+  requireGroup(GROUPS.LEADER),
   enforceContractAccess,
   c.approve,
 );
-r.post("/:id/sign", enforceContractAccess, c.sign);
+r.post("/:id/return", requireGroup(GROUPS.LEADER), enforceContractAccess, c.returnForRevision);
+r.post("/:id/reject", requireGroup(GROUPS.LEADER, GROUPS.DIRECTOR), enforceContractAccess, c.reject);
+r.post("/:id/sign", requireGroup(GROUPS.DIRECTOR), enforceContractAccess, c.sign);
 r.post(
   "/:id/payment",
-  authorize("admin", "manager", "staff"),
+  authorize("admin"),
   enforceContractAccess,
   c.payment,
 );

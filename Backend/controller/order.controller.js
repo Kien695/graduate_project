@@ -25,13 +25,19 @@ const create = catchAsyncError(async (req, res) =>
     await service.create(req.body, req.user),
   ),
 );
+const capabilities = catchAsyncError(async (req, res) =>
+  successResponse(res, 200, "Lấy quyền xử lý đơn hàng thành công", {
+    group: req.contractActor?.group || null,
+    canConfirm: req.contractActor?.group === "nhanvien",
+  }),
+);
 const action = (status) =>
   catchAsyncError(async (req, res) =>
     successResponse(
       res,
       200,
       "Cập nhật đơn hàng thành công",
-      await service.transition(req.params.id, status, req.user),
+      await service.transition(req.params.id, status, req.user, req.contractActor),
     ),
   );
 const update = catchAsyncError(async (req, res) =>
@@ -44,6 +50,7 @@ const update = catchAsyncError(async (req, res) =>
 );
 module.exports = {
   list,
+  capabilities,
   get,
   create,
   update,

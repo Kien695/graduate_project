@@ -20,7 +20,7 @@ const validate = async () => {
       "SELECT email_encrypted,phone_encrypted,email_lookup_hash FROM users LIMIT 0",
       "SELECT id,vin,brand,model,price,status,description,images,updated_at FROM vehicles LIMIT 0",
       "SELECT id,name,sku,price,stock,is_active,images,updated_at FROM accessories LIMIT 0",
-      "SELECT id,customer_id,vehicle_id,total_amount,note,created_by,status,updated_at FROM orders LIMIT 0",
+      "SELECT id,customer_id,vehicle_id,total_amount,note,created_by,status,confirmed_by,confirmed_at,updated_at FROM orders LIMIT 0",
       "SELECT id,order_id,contract_number,terms,security_level_id,approved_by,approved_at,signed_at,updated_at FROM contracts LIMIT 0",
       "SELECT id,contract_id,amount,method,reference,paid_at,created_by FROM payments LIMIT 0",
       "SELECT id,vehicle_id,order_id,contract_id,inspector_id,status,checklist,notes,inspected_at,updated_at FROM inspections LIMIT 0",

@@ -3,21 +3,25 @@ const audit = require("../service/auditLog.service");
 const { catchAsyncError } = require("../middleware/catchAsyncError");
 const { ErrorHandler } = require("../middleware/errorMiddleware");
 const { successResponse } = require("../utils/response");
-const list = catchAsyncError(async (req, res) =>
-  successResponse(
+const list = catchAsyncError(async (req, res) => {
+  req.user.contractActor = req.contractActor;
+  return successResponse(
     res,
     200,
     "Lấy hợp đồng thành công",
     await service.list(req.user),
-  ),
-);
+  );
+});
 const get = catchAsyncError(async (req, res) =>
   successResponse(
     res,
     200,
     "Lấy hợp đồng thành công",
-    await service.get(req.params.id),
+    await service.get(req.params.id, req.user, req.contractActor),
   ),
+);
+const capabilities = catchAsyncError(async (req, res) =>
+  successResponse(res, 200, "Lấy quyền quy trình hợp đồng thành công", service.capabilities(req.contractActor)),
 );
 const create = catchAsyncError(async (req, res) => {
   if (!req.body.order_id) throw new ErrorHandler("order_id là bắt buộc", 400);
@@ -33,16 +37,16 @@ const update = catchAsyncError(async (req, res) =>
     res,
     200,
     "Cập nhật hợp đồng thành công",
-    await service.update(req.params.id, req.body, req.user, req.ip),
+    await service.update(req.params.id, req.body, req.user, req.contractActor, req.ip),
   ),
 );
-const action = (status) =>
+const action = (actionName) =>
   catchAsyncError(async (req, res) =>
     successResponse(
       res,
       200,
       "Cập nhật hợp đồng thành công",
-      await service.setStatus(req.params.id, status, req.user, req.ip),
+      await service.transition(req.params.id, actionName, req.body?.reason, req.user, req.contractActor, req.ip),
     ),
   );
 const payment = catchAsyncError(async (req, res) => {
@@ -76,12 +80,15 @@ const security = catchAsyncError(async (req, res) =>
 );
 module.exports = {
   list,
+  capabilities,
   get,
   create,
   update,
-  approve: action("approved"),
-  sign: action("signed"),
-  remove: action("cancelled"),
+  submit: action("submit"),
+  approve: action("approve"),
+  returnForRevision: action("return"),
+  reject: action("reject"),
+  sign: action("sign"),
   payment,
   logs,
   security,
