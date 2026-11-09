@@ -201,7 +201,13 @@ ALTER TABLE vehicles ADD CONSTRAINT vehicles_status_check CHECK (UPPER(status) I
 ALTER TABLE orders DROP CONSTRAINT IF EXISTS orders_status_check;
 ALTER TABLE orders ADD CONSTRAINT orders_status_check CHECK (UPPER(status) IN ('PENDING','CONFIRMED','CANCELLED','COMPLETED'));
 ALTER TABLE contracts DROP CONSTRAINT IF EXISTS contracts_status_check;
-ALTER TABLE contracts ADD CONSTRAINT contracts_status_check CHECK (UPPER(status) IN ('CREATED','DRAFT','APPROVED','SIGNED','CANCELLED','COMPLETED'));
+-- Keep the bootstrap schema aligned with the workflow migration. This file is
+-- executed on every deployment, including databases that already contain the
+-- newer pending/revision/rejected statuses.
+ALTER TABLE contracts ADD CONSTRAINT contracts_status_check CHECK (LOWER(status) IN (
+  'created','draft','revision_requested','pending_manager','approved',
+  'pending_director','signed','rejected','cancelled','completed'
+));
 
 -- A deliberately narrow projection for Dashboard. Granting SELECT on this
 -- view does not grant direct SELECT on the underlying business tables.
