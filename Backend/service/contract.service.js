@@ -220,8 +220,24 @@ const legacySetStatus = (id, status, user, ipAddress) =>
   });
 
 const transition = (id, action, reason, user, actor, ipAddress) =>
-  withTransaction(async (client) => {
-    const old = await client.query("SELECT * FROM contracts WHERE id=$1 FOR UPDATE", [id]);
+  // Workflow decisions are mediated by the application after RBAC and MAC
+  // checks. Running the status-only transition on the system connection avoids
+  // PostgreSQL applying both the SELECT (no read up) and UPDATE (no write down)
+  // RLS predicates to SELECT ... FOR UPDATE, which would otherwise hide every
+  // contract whose label is lower than the approver's clearance.
+  withSystemTransaction(async (client) => {
+    const old = await client.query(
+      `SELECT c.* FROM contracts c
+       JOIN security_levels object_level ON object_level.id=c.security_level_id
+       JOIN users subject ON subject.id=$2
+       JOIN security_levels subject_level ON subject_level.id=subject.security_level_id
+       WHERE c.id=$1
+         AND subject.is_active IS DISTINCT FROM FALSE
+         AND subject.is_locked IS DISTINCT FROM TRUE
+         AND subject_level.rank >= object_level.rank
+       FOR UPDATE OF c`,
+      [id, user.id],
+    );
     if (!old.rows[0]) throw new ErrorHandler("Không tìm thấy hợp đồng", 404);
     const rules = {
       submit: { groups: [GROUPS.EMPLOYEE], from: ["draft", "revision_requested"], to: "pending_manager" },
