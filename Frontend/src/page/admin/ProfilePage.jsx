@@ -15,6 +15,18 @@ const roleLabel = {
   manager: "Quản lý",
   staff: "Nhân viên",
 };
+const permissionGroupLabel = {
+  giamdoc: "Giám đốc",
+  truongnhom: "Trưởng nhóm",
+  nhanvien: "Nhân viên",
+  kiemdinh: "Kiểm định",
+};
+const displayRole = (user) =>
+  String(user?.position || "").trim() ||
+  permissionGroupLabel[String(user?.permission_group_name || "").toLowerCase()] ||
+  roleLabel[String(user?.role || "").toLowerCase()] ||
+  user?.role ||
+  "";
 const profileValues = (user = {}) => ({
   fullName: user.full_name || "",
   email: user.email || "",
@@ -166,7 +178,7 @@ export default function ProfilePage() {
             {user?.email}
           </p>
           <span className="mt-3 inline-block rounded-full bg-blue-50 px-3 py-1 text-xs font-bold text-blue-700 dark:bg-blue-950/40 dark:text-blue-300">
-            {roleLabel[String(user?.role || "").toLowerCase()] || user?.role}
+            {displayRole(user)}
           </span>
         </div>
       </section>
@@ -209,11 +221,7 @@ export default function ProfilePage() {
             />
             <Field
               label="Vai trò"
-              value={
-                roleLabel[String(user?.role || "").toLowerCase()] ||
-                user?.role ||
-                ""
-              }
+              value={displayRole(user)}
               disabled
             />
           </div>

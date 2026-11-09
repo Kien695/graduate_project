@@ -12,6 +12,7 @@ import Pagination from "../common/Pagination";
 import StatusBadge from "../common/StatusBadge";
 import StatusFilter from "../common/StatusFilter";
 import LoadingState from "../common/LoadingState";
+import { getData } from "../../utils/api";
 
 const statusOptions = [
   { value: "pending", label: "Đang chờ" },
@@ -31,8 +32,12 @@ export default function VehicleOrderManager() {
   const [search, setSearch] = useState(""),
     [status, setStatus] = useState("all"),
     [page, setPage] = useState(1);
+  const [capabilities, setCapabilities] = useState({ canConfirm: false });
   useEffect(() => {
     dispatch(fetchOrders());
+    getData("/orders/capabilities")
+      .then((response) => setCapabilities(response.data || { canConfirm: false }))
+      .catch(() => setCapabilities({ canConfirm: false }));
   }, [dispatch]);
   useEffect(() => {
     if (error) toast.error(error);
@@ -114,7 +119,7 @@ export default function VehicleOrderManager() {
                 </td>
                 <td>
                   <div className="flex gap-2 text-xs">
-                    {o.status === "pending" && (
+                    {capabilities.canConfirm && o.status === "pending" && (
                       <button
                         disabled={submitting}
                         onClick={() =>

@@ -10,6 +10,10 @@ const colors = {
   reserved: "bg-amber-50 text-amber-700",
   pending: "bg-amber-50 text-amber-700",
   draft: "bg-slate-100 text-slate-600",
+  revision_requested: "bg-orange-50 text-orange-700",
+  pending_manager: "bg-amber-50 text-amber-700",
+  pending_director: "bg-indigo-50 text-indigo-700",
+  rejected: "bg-rose-50 text-rose-700",
   cancelled: "bg-rose-50 text-rose-700",
   failed: "bg-rose-50 text-rose-700",
   sold: "bg-violet-50 text-violet-700",
@@ -21,6 +25,12 @@ const labels = {
   active: "ACTIVE",
   inactive: "INACTIVE",
   out_of_stock: "OUT_OF_STOCK",
+  draft: "Nháp",
+  revision_requested: "Cần chỉnh sửa",
+  pending_manager: "Chờ trưởng phòng duyệt",
+  pending_director: "Chờ giám đốc ký",
+  signed: "Đã ký",
+  rejected: "Đã từ chối",
 };
 
 export default function StatusBadge({ value }) {

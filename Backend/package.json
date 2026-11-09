@@ -12,6 +12,7 @@
     "db:validate": "node database/validateSchema.js",
     "db:inspect": "node database/inspectSchema.js",
     "db:create-admin": "node database/createAdmin.js",
+    "db:grant-contract-security-admin": "node scripts/grantContractSecurityAdmin.js",
     "check": "node scripts/check.js",
     "test:e2e": "node scripts/e2e.js",
     "test:storage-quota": "node scripts/testStorageQuota.js",

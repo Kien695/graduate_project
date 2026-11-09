@@ -5,10 +5,13 @@ const {
   enforceContractAccess,
   enforceContractCreate,
   enforceContractSecurityChange,
+  loadMacSecurityAdmin,
+  requireMacSecurityAdmin,
 } = require("../middleware/mac.middleware");
 const r = express.Router();
 const { GROUPS, loadContractGroup, requireGroup } = require("../middleware/contractWorkflow.middleware");
 r.use(auth);
+r.use(loadMacSecurityAdmin);
 r.use(loadContractGroup);
 r.get("/capabilities", c.capabilities);
 r.get("/", authorize("admin", "manager", "staff"), c.list);
@@ -44,7 +47,7 @@ r.post(
 r.get("/:id/audit-logs", enforceContractAccess, c.logs);
 r.patch(
   "/:id/security-level",
-  authorize("admin"),
+  requireMacSecurityAdmin,
   enforceContractAccess,
   enforceContractSecurityChange,
   c.security,

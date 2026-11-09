@@ -3,11 +3,13 @@ import { useDispatch, useSelector } from "react-redux";
 import { toast } from "react-toastify";
 import {
   approveContract,
-  cancelContract,
   createContract,
   fetchContracts,
   payContract,
   signContract,
+  submitContractForApproval,
+  returnContract,
+  rejectContract,
   updateContract,
   updateContractSecurity,
 } from "../../redux/slices/contractSlice";
@@ -21,6 +23,10 @@ import LoadingState from "../common/LoadingState";
 import { Icon } from "../common/Icons";
 
 const statusOptions = [
+  { value: "revision_requested", label: "Cần chỉnh sửa" },
+  { value: "pending_manager", label: "Chờ trưởng phòng duyệt" },
+  { value: "pending_director", label: "Chờ giám đốc ký" },
+  { value: "rejected", label: "Đã từ chối" },
   { value: "draft", label: "Chờ duyệt" },
   { value: "approved", label: "Đã duyệt" },
   { value: "signed", label: "Đã ký" },
@@ -44,7 +50,6 @@ const emptyContract = {
   order_id: "",
   contract_number: "",
   terms: "",
-  security_level_id: "",
 };
 const emptyPayment = { amount: "", method: "bank_transfer", reference: "" };
 
@@ -65,12 +70,14 @@ export default function ContractManager() {
     [logs, setLogs] = useState([]),
     [detailLoading, setDetailLoading] = useState(false),
     [securityLevel, setSecurityLevel] = useState("");
+  const [capabilities, setCapabilities] = useState({});
   useEffect(() => {
     dispatch(fetchContracts());
-    Promise.all([getData("/orders"), getData("/security-levels")])
-      .then(([o, l]) => {
+    Promise.all([getData("/orders"), getData("/security-levels"), getData("/contracts/capabilities")])
+      .then(([o, l, c]) => {
         setOrders(o.data || []);
         setLevels(l.data || []);
+        setCapabilities(c.data || {});
       })
       .catch((e) =>
         toast.error(
@@ -112,7 +119,6 @@ export default function ContractManager() {
       order_id: c.order_id,
       contract_number: c.contract_number || "",
       terms: c.terms || "",
-      security_level_id: c.security_level_id || "",
     });
     setFormOpen(true);
   };
@@ -121,7 +127,6 @@ export default function ContractManager() {
     const data = {
       ...form,
       order_id: Number(form.order_id),
-      security_level_id: Number(form.security_level_id),
     };
     try {
       if (editing)
@@ -158,11 +163,13 @@ export default function ContractManager() {
     }
   };
   const assignSecurity = async () => {
+    const reason = window.prompt("Lý do thay đổi nhãn bảo mật MAC:");
+    if (!reason?.trim()) return;
     try {
       await dispatch(
         updateContractSecurity({
           id: detail.id,
-          data: { securityLevelId: Number(securityLevel) },
+          data: { securityLevelId: Number(securityLevel), reason: reason.trim() },
         }),
       ).unwrap();
       toast.success("Đã cập nhật nhãn bảo mật MAC");
@@ -192,6 +199,7 @@ export default function ContractManager() {
   const confirmedOrders = orders.filter(
     (o) =>
       String(o.status).toLowerCase() === "confirmed" &&
+      !o.contract_exists &&
       !items.some((c) => c.order_id === o.id && c.id !== editing?.id),
   );
   return (
@@ -214,7 +222,7 @@ export default function ContractManager() {
             options={statusOptions}
           />
         }
-        onAdd={openCreate}
+        onAdd={capabilities.canCreate ? openCreate : undefined}
         addLabel="Tạo hợp đồng"
       >
         {loading ? (
@@ -225,6 +233,7 @@ export default function ContractManager() {
               <tr>
                 {[
                   "Mã hợp đồng",
+                  "Nhân viên tạo",
                   "Khách hàng / Xe",
                   "Ngày tạo",
                   "Tổng tiền",
@@ -243,6 +252,7 @@ export default function ContractManager() {
                   <td className="text-slate-900 dark:text-white">
                     {c.contract_number}
                   </td>
+                  <td>{c.created_by_name || "Tài khoản không còn tồn tại"}</td>
                   <td>
                     <div className="font-semibold">
                       {c.customer_name || `Đơn hàng #${c.order_id}`}
@@ -273,7 +283,7 @@ export default function ContractManager() {
                       >
                         <Icon name="eye" className="h-4 w-4" />
                       </button>
-                      {["draft", "approved"].includes(c.status) && (
+                      {capabilities.canCreate && ["draft", "revision_requested"].includes(c.status) && (
                         <button
                           onClick={() => openEdit(c)}
                           className="action-blue"
@@ -282,7 +292,12 @@ export default function ContractManager() {
                           <Icon name="edit" className="h-4 w-4" />
                         </button>
                       )}
-                      {c.status === "draft" && (
+                      {capabilities.canSubmit && ["draft", "revision_requested"].includes(c.status) && (
+                        <button onClick={() => run(submitContractForApproval, c.id, "Đã gửi trưởng phòng duyệt")} className="action-blue">
+                          Gửi duyệt
+                        </button>
+                      )}
+                      {capabilities.canApprove && c.status === "pending_manager" && (
                         <button
                           onClick={() =>
                             run(approveContract, c.id, "Đã duyệt hợp đồng")
@@ -292,7 +307,19 @@ export default function ContractManager() {
                           Duyệt
                         </button>
                       )}
-                      {c.status === "approved" && (
+                      {capabilities.canReturn && c.status === "pending_manager" && (
+                        <button onClick={() => {
+                          const reason = window.prompt("Lý do trả lại để chỉnh sửa:");
+                          if (reason?.trim()) run(returnContract, { id: c.id, data: { reason } }, "Đã trả lại hợp đồng");
+                        }} className="action-blue">Trả lại</button>
+                      )}
+                      {capabilities.canReject && ((capabilities.group === "truongnhom" && c.status === "pending_manager") || (capabilities.group === "giamdoc" && c.status === "pending_director")) && (
+                        <button onClick={() => {
+                          const reason = window.prompt("Lý do từ chối:");
+                          if (reason?.trim()) run(rejectContract, { id: c.id, data: { reason } }, "Đã từ chối hợp đồng");
+                        }} className="action-red">Từ chối</button>
+                      )}
+                      {capabilities.canSign && c.status === "pending_director" && (
                         <button
                           onClick={() =>
                             run(signContract, c.id, "Đã ký hợp đồng")
@@ -315,25 +342,13 @@ export default function ContractManager() {
                           Thanh toán
                         </button>
                       )}
-                      {["draft", "approved"].includes(c.status) && (
-                        <button
-                          onClick={() =>
-                            window.confirm(
-                              `Hủy hợp đồng ${c.contract_number}?`,
-                            ) && run(cancelContract, c.id, "Đã hủy hợp đồng")
-                          }
-                          className="action-red"
-                        >
-                          Hủy
-                        </button>
-                      )}
                     </div>
                   </td>
                 </tr>
               ))}
               {!filtered.length && (
                 <tr>
-                  <td colSpan="8" className="py-16 text-center text-slate-400">
+                  <td colSpan="9" className="py-16 text-center text-slate-400">
                     Không có hợp đồng
                   </td>
                 </tr>
@@ -393,25 +408,11 @@ export default function ContractManager() {
               onChange={(e) => setForm({ ...form, terms: e.target.value })}
             />
           </label>
-          <label className="block text-xs font-bold">
-            Nhãn bảo mật MAC *
-            <select
-              disabled={Boolean(editing)}
-              required
-              className="form-control mt-2"
-              value={form.security_level_id}
-              onChange={(e) =>
-                setForm({ ...form, security_level_id: e.target.value })
-              }
-            >
-              <option value="">Chọn nhãn bảo mật</option>
-              {levels.map((l) => (
-                <option key={l.id} value={l.id}>
-                  {l.name || l.level_name} (rank {l.rank})
-                </option>
-              ))}
-            </select>
-          </label>
+          {!editing && (
+            <p className="rounded-xl bg-slate-50 p-3 text-xs dark:bg-slate-900">
+              Nhãn bảo mật MAC được hệ thống tự động gán INTERNAL.
+            </p>
+          )}
           <button
             disabled={submitting}
             className="w-full rounded-xl bg-blue-600 py-3 text-sm font-bold text-white disabled:opacity-50"
@@ -520,7 +521,7 @@ export default function ContractManager() {
                   {detail.terms || "Chưa có điều khoản"}
                 </div>
               </section>
-              <section>
+              {capabilities.canManageMac && <section>
                 <h3 className="mb-2 text-sm font-bold text-slate-900 dark:text-white">
                   Nhãn bảo mật MAC
                 </h3>
@@ -543,7 +544,7 @@ export default function ContractManager() {
                     Cập nhật
                   </button>
                 </div>
-              </section>
+              </section>}
               <section>
                 <h3 className="mb-2 text-sm font-bold text-slate-900 dark:text-white">
                   Lịch sử thanh toán

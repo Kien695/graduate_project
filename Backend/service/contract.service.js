@@ -1,4 +1,4 @@
-const { database, withTransaction, withSystemTransaction } = require("../database/database");
+const { database, systemDatabase, withTransaction, withSystemTransaction } = require("../database/database");
 const { ErrorHandler } = require("../middleware/errorMiddleware");
 const auditLog = require("./auditLog.service");
 const { tryDecryptProfileValue } = require("../utils/profileEncryption");
@@ -17,19 +17,22 @@ const list = async (user) => {
   const { rows } = await database.query(
     `SELECT c.*,o.customer_id,o.vehicle_id,o.total_amount order_total_amount,
     cu.full_name customer_name,v.brand vehicle_brand,v.model vehicle_model,v.vin,
+    COALESCE(creator.full_name,creator.username,creator.email,'Tài khoản không còn tồn tại') created_by_name,
     sl.name security_level_name,COALESCE(SUM(p.amount),0) paid_amount,
     (SELECT LOWER(i.status) FROM inspections i WHERE i.contract_id=c.id
       ORDER BY i.created_at DESC LIMIT 1) inspection_status
     FROM contracts c JOIN orders o ON o.id=c.order_id LEFT JOIN payments p ON p.contract_id=c.id
+    LEFT JOIN users creator ON creator.id=c.created_by
     LEFT JOIN customers cu ON cu.id=o.customer_id LEFT JOIN vehicles v ON v.id=o.vehicle_id
     LEFT JOIN security_levels sl ON sl.id=c.security_level_id ${access}
-    GROUP BY c.id,o.customer_id,o.vehicle_id,o.total_amount,cu.full_name,v.brand,v.model,v.vin,sl.name ORDER BY c.created_at DESC`,
+    GROUP BY c.id,o.customer_id,o.vehicle_id,o.total_amount,cu.full_name,v.brand,v.model,v.vin,
+    creator.id,sl.name ORDER BY c.created_at DESC`,
     values,
   );
   return rows;
 };
 
-const capabilities = (actor) => ({
+const capabilities = (actor, canManageMac = false) => ({
   group: actor?.group || null,
   canCreate: actor?.group === GROUPS.EMPLOYEE,
   canSubmit: actor?.group === GROUPS.EMPLOYEE,
@@ -37,6 +40,7 @@ const capabilities = (actor) => ({
   canReturn: actor?.group === GROUPS.LEADER,
   canReject: [GROUPS.LEADER, GROUPS.DIRECTOR].includes(actor?.group),
   canSign: actor?.group === GROUPS.DIRECTOR,
+  canManageMac,
 });
 
 const get = async (id, user, actor) => {
@@ -46,16 +50,18 @@ const get = async (id, user, actor) => {
     `SELECT c.*,o.customer_id,o.vehicle_id,o.total_amount order_total_amount,
     cu.full_name customer_name,cu.email customer_email,cu.phone customer_phone,
     cu.email_encrypted customer_email_encrypted,cu.phone_encrypted customer_phone_encrypted,
+    COALESCE(creator.full_name,creator.username,creator.email,'Tài khoản không còn tồn tại') created_by_name,
     v.brand vehicle_brand,v.model vehicle_model,v.vin,sl.name security_level_name,sl.rank security_level_rank,
     COALESCE(SUM(p.amount),0) paid_amount,
     (SELECT LOWER(i.status) FROM inspections i WHERE i.contract_id=c.id
       ORDER BY i.created_at DESC LIMIT 1) inspection_status
     FROM contracts c JOIN orders o ON o.id=c.order_id LEFT JOIN payments p ON p.contract_id=c.id
+    LEFT JOIN users creator ON creator.id=c.created_by
     LEFT JOIN customers cu ON cu.id=o.customer_id LEFT JOIN vehicles v ON v.id=o.vehicle_id
     LEFT JOIN security_levels sl ON sl.id=c.security_level_id
     WHERE c.id=$1 GROUP BY c.id,o.customer_id,o.vehicle_id,o.total_amount,cu.full_name,
     cu.email,cu.phone,cu.email_encrypted,cu.phone_encrypted,
-    v.brand,v.model,v.vin,sl.name,sl.rank`,
+    v.brand,v.model,v.vin,creator.id,sl.name,sl.rank`,
     [id],
   );
   if (!rows[0]) throw new ErrorHandler("Không tìm thấy hợp đồng", 404);
@@ -78,12 +84,19 @@ const get = async (id, user, actor) => {
   return { ...rows[0], payments: payments.rows, workflow_history: history.rows };
 };
 
-// Classification is validated by the MAC middleware.
-const create = (input, classification, user, ipAddress) =>
-  withTransaction(async (client) => {
-    if (!classification)
-      throw new ErrorHandler("Thieu ngu canh phan loai MAC", 500);
+// PostgreSQL supplies the INTERNAL classification. Client input is rejected by middleware.
+const create = async (input, user, ipAddress) => {
+  // Check through the system connection because the subject's RLS view may
+  // legitimately hide an existing INTERNAL (or higher) contract.
+  const existing = await systemDatabase.query(
+    "SELECT 1 FROM contracts WHERE order_id=$1 LIMIT 1",
+    [input.order_id],
+  );
+  if (existing.rows[0])
+    throw new ErrorHandler("Đơn hàng này đã có hợp đồng", 409);
 
+  try {
+    return await withTransaction(async (client) => {
     const order = await client.query(
       "SELECT * FROM orders WHERE id=$1 FOR UPDATE",
       [input.order_id],
@@ -97,15 +110,14 @@ const create = (input, classification, user, ipAddress) =>
     const number = input.contract_number || `HD-${Date.now()}`;
     const { rows } = await client.query(
       `INSERT INTO contracts(order_id, customer_id, contract_number, total_amount, terms,
-     security_level_id, status, created_by)
-   VALUES($1,$2,$3,$4,$5,$6,'draft',$7) RETURNING *`,
+     status, created_by)
+   VALUES($1,$2,$3,$4,$5,'draft',$6) RETURNING *`,
       [
         input.order_id,
         order.rows[0].customer_id,
         number,
         order.rows[0].total_amount,
         input.terms || null,
-        classification.levelId,
         user.id,
       ],
     );
@@ -118,7 +130,13 @@ const create = (input, classification, user, ipAddress) =>
       ipAddress,
     });
     return rows[0];
-  });
+    });
+  } catch (error) {
+    if (error.code === "23505" && error.constraint === "contracts_order_unique")
+      throw new ErrorHandler("Đơn hàng này đã có hợp đồng", 409);
+    throw error;
+  }
+};
 
 const update = (id, input, user, actor, ipAddress) =>
   withTransaction(async (client) => {
@@ -306,10 +324,12 @@ const addPayment = (id, input, user, ipAddress) =>
   });
 
 // Classification is validated by the MAC middleware.
-const setSecurityLevel = (id, classification, user, ipAddress) =>
+const setSecurityLevel = (id, classification, reason, user, ipAddress) =>
   withSystemTransaction(async (client) => {
     if (!classification)
       throw new ErrorHandler("Thieu ngu canh phan loai MAC", 500);
+    const cleanReason = String(reason || "").trim();
+    if (!cleanReason) throw new ErrorHandler("Ly do thay doi nhan MAC la bat buoc", 400);
 
     const old = await client.query(
       "SELECT * FROM contracts WHERE id=$1 FOR UPDATE",
@@ -317,6 +337,8 @@ const setSecurityLevel = (id, classification, user, ipAddress) =>
     );
     if (!old.rows[0]) throw new ErrorHandler("Không tìm thấy hợp đồng", 404);
 
+    await client.query("SELECT set_config('app.mac_actor_id', $1, true)", [String(user.id)]);
+    await client.query("SELECT set_config('app.mac_change_reason', $1, true)", [cleanReason]);
     const { rows } = await client.query(
       `UPDATE contracts SET security_level_id=$2, updated_at=NOW()
        WHERE id=$1 RETURNING *`,
@@ -332,6 +354,7 @@ const setSecurityLevel = (id, classification, user, ipAddress) =>
       },
       newValues: {
         security_level_id: classification.levelId,
+        reason: cleanReason,
       },
       ipAddress,
     });

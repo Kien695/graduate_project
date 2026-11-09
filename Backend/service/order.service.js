@@ -1,4 +1,4 @@
-const { database, withTransaction } = require("../database/database");
+const { database, systemDatabase, withTransaction } = require("../database/database");
 const { ErrorHandler } = require("../middleware/errorMiddleware");
 const notification = require("./notification.service");
 const { GROUPS } = require("../middleware/contractWorkflow.middleware");
@@ -14,6 +14,17 @@ const list = async (user) => {
  ${own ? "JOIN users u ON u.id=c.user_id WHERE u.id=$1" : ""} ORDER BY o.created_at DESC`,
     own ? [user.id] : [],
   );
+  // RLS can hide an existing higher-classified contract from this subject.
+  // Expose only the existence bit needed to prevent offering the order again;
+  // never expose the hidden contract row or its classification.
+  if (!own && rows.length) {
+    const existing = await systemDatabase.query(
+      "SELECT order_id FROM contracts WHERE order_id=ANY($1::int[])",
+      [rows.map((row) => row.id)],
+    );
+    const occupied = new Set(existing.rows.map((row) => Number(row.order_id)));
+    for (const row of rows) row.contract_exists = occupied.has(Number(row.id));
+  }
   return rows;
 };
 const get = async (id, user) => {

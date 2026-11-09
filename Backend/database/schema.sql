@@ -25,6 +25,7 @@ ALTER TABLE users ADD COLUMN IF NOT EXISTS phone_encrypted TEXT;
 ALTER TABLE users ADD COLUMN IF NOT EXISTS email_lookup_hash CHAR(64);
 ALTER TABLE users ADD COLUMN IF NOT EXISTS phone_lookup_hash CHAR(64);
 ALTER TABLE users ADD COLUMN IF NOT EXISTS db_user VARCHAR(63);
+ALTER TABLE users ADD COLUMN IF NOT EXISTS can_manage_contract_mac BOOLEAN NOT NULL DEFAULT FALSE;
 UPDATE users SET full_name=COALESCE(full_name,username,email),failed_login_attempts=COALESCE(failed_login_count,failed_login_attempts,0),is_active=UPPER(COALESCE(status,'ACTIVE')) NOT IN ('INACTIVE','DISABLED'),is_locked=COALESCE(is_locked,FALSE) OR locked_until>NOW();
 CREATE UNIQUE INDEX IF NOT EXISTS users_email_unique_ci ON users(LOWER(email)) WHERE email IS NOT NULL;
 CREATE UNIQUE INDEX IF NOT EXISTS users_email_lookup_hash_unique ON users(email_lookup_hash) WHERE email_lookup_hash IS NOT NULL;

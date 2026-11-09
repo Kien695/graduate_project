@@ -240,6 +240,13 @@ const update = async (employeeId, requested = {}) => withSystemTransaction(async
       );
       granted = granted.filter((table) => table !== "contracts");
     }
+    if (privilege === "INSERT" && granted.includes("contracts")) {
+      await client.query(`REVOKE INSERT ON TABLE public.contracts FROM ${role}`);
+      await client.query(
+        `GRANT INSERT (order_id,customer_id,contract_number,total_amount,status,terms,created_by) ON TABLE public.contracts TO ${role}`,
+      );
+      granted = granted.filter((table) => table !== "contracts");
+    }
     // Clearance is security-administration data, never a feature permission.
     if (privilege === "UPDATE" && granted.includes("users")) {
       await client.query(`REVOKE UPDATE ON TABLE public.users FROM ${role}`);

@@ -1,5 +1,15 @@
 import { useNavigate } from "react-router-dom";
 
+const labels = {
+  giamdoc: "Giám đốc",
+  truongnhom: "Trưởng nhóm",
+  nhanvien: "Nhân viên",
+  kiemdinh: "Kiểm định",
+  admin: "Quản trị viên",
+  manager: "Quản lý",
+  staff: "Nhân viên",
+};
+
 export default function UserMenu({ user }) {
   const navigate = useNavigate();
   return (
@@ -24,7 +34,9 @@ export default function UserMenu({ user }) {
           {user?.full_name || "Administrator"}
         </p>
         <p className="text-[11px] capitalize text-slate-500 dark:text-slate-400">
-          {user?.role || "admin"}
+          {String(user?.position || "").trim() ||
+            labels[String(user?.permission_group_name || user?.role || "admin").toLowerCase()] ||
+            user?.role}
         </p>
       </div>
     </button>

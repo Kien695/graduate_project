@@ -216,7 +216,7 @@ Khi tạo đơn, service khóa bản ghi xe trong transaction. Xe phải có tr�
 | POST | `/api/contracts/:id/sign` | Nhóm `giamdoc` + MAC | Ký hợp đồng đã được trưởng nhóm duyệt |
 | POST | `/api/contracts/:id/payment` | Admin/Manager/Staff + MAC | Thanh toán |
 | GET | `/api/contracts/:id/audit-logs` | Đã đăng nhập + MAC | Lịch sử hợp đồng |
-| PATCH | `/api/contracts/:id/security-level` | Admin | Gán nhãn bảo mật |
+| PATCH | `/api/contracts/:id/security-level` | Thành viên `contract_security_admin` | Gán nhãn bảo mật; bắt buộc `reason` |
 
 Tạo hợp đồng:
 
@@ -224,8 +224,7 @@ Tạo hợp đồng:
 {
   "order_id": 1,
   "contract_number": "HD-2026-0001",
-  "terms": "Contract terms",
-  "security_level_id": 2
+  "terms": "Contract terms"
 }
 ```
 
@@ -239,7 +238,7 @@ Thanh toán:
 }
 ```
 
-Đơn hàng phải ở trạng thái `confirmed` trước khi tạo hợp đồng. Tổng thanh toán không được vượt giá trị đơn hàng.
+Đơn hàng phải ở trạng thái `confirmed` trước khi tạo hợp đồng. PostgreSQL tự gán nhãn `INTERNAL`; request tạo có `security_level_id` hoặc `securityLevelId` bị từ chối. Tổng thanh toán không được vượt giá trị đơn hàng.
 
 ## 8. Inspection
 

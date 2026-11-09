@@ -21,7 +21,7 @@ const get = catchAsyncError(async (req, res) =>
   ),
 );
 const capabilities = catchAsyncError(async (req, res) =>
-  successResponse(res, 200, "Lấy quyền quy trình hợp đồng thành công", service.capabilities(req.contractActor)),
+  successResponse(res, 200, "Lấy quyền quy trình hợp đồng thành công", service.capabilities(req.contractActor, req.macSecurityAdmin)),
 );
 const create = catchAsyncError(async (req, res) => {
   if (!req.body.order_id) throw new ErrorHandler("order_id là bắt buộc", 400);
@@ -29,7 +29,7 @@ const create = catchAsyncError(async (req, res) => {
     res,
     201,
     "Tạo hợp đồng thành công",
-    await service.create(req.body, req.macClassification, req.user, req.ip),
+    await service.create(req.body, req.user, req.ip),
   );
 });
 const update = catchAsyncError(async (req, res) =>
@@ -75,7 +75,7 @@ const security = catchAsyncError(async (req, res) =>
     res,
     200,
     "Cập nhật nhãn bảo mật thành công",
-    await service.setSecurityLevel(req.params.id, req.macClassification, req.user, req.ip),
+    await service.setSecurityLevel(req.params.id, req.macClassification, req.body.reason, req.user, req.ip),
   ),
 );
 module.exports = {

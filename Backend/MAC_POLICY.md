@@ -23,9 +23,16 @@ Migration `20261106_contract_mac_rls.sql` bật và `FORCE ROW LEVEL SECURITY` t
 
 Role nghiệp vụ là LOGIN role `NOSUPERUSER NOBYPASSRLS`, không sở hữu bảng.
 `contract_security_admin` là NOLOGIN role riêng cho đường quản lý nhãn. Chỉ API
-ADMIN được đổi classification; việc đổi nhãn chạy qua system/security-admin
+và tài khoản PostgreSQL được cấp membership role này mới được đổi classification;
+chức danh/nhóm nghiệp vụ (kể cả giám đốc) không tự động có quyền. Việc đổi nhãn chạy qua system/security-admin
 transaction và được ghi audit. Người dùng thường bị thu hồi quyền UPDATE cột
 `security_level_id` trên cả `users` và `contracts`.
+
+Hợp đồng mới không nhận classification từ client. Default cột tại PostgreSQL gọi
+`contract_default_security_level_id()` và trả về mức `INTERNAL`. Quyền INSERT của
+tài khoản nghiệp vụ loại trừ cột `security_level_id`. Mỗi lần đổi nhãn bắt buộc có
+actor và lý do; trigger ghi vào `contract_security_level_history`. Migration không
+cập nhật nhãn của bất kỳ hợp đồng cũ nào.
 
 Các hàm trong policy là `SECURITY DEFINER`, cố định `search_path` thành
 `pg_catalog, public`, thu hồi EXECUTE khỏi PUBLIC và chỉ cấp cho từng DB login.
@@ -50,10 +57,30 @@ npm.cmd run test:contract-rls
 Hoặc đăng nhập trực tiếp bằng role của userA rồi chạy:
 
 ```sql
+-- Lấy tất cả hợp đồng có cùng hoặc nhỏ hơn mức mac
 SELECT session_user, public.mac_subject_rank();
 SELECT c.id, sl.name
 FROM public.contracts c
 JOIN public.security_levels sl ON sl.id = c.security_level_id;
+
+
+-- lấy hợp đồng cùng hoặc nhỏ hơn mức mac và lấy theo người tạo
+
+SELECT
+    c.id,
+    c.contract_number,
+    c.created_by,
+    creator.full_name AS created_by_name,
+    sl.name AS security_level,
+    sl.rank AS security_rank
+FROM public.contracts c
+JOIN public.security_levels sl
+    ON sl.id = c.security_level_id
+JOIN public.users creator
+    ON creator.id = c.created_by
+WHERE LOWER(creator.db_user) = LOWER(session_user)
+  AND sl.rank <= public.mac_subject_rank()
+ORDER BY c.created_at DESC;
 ```
 
 Khi userA ở PUBLIC, kết quả không chứa hợp đồng INTERNAL; truy vấn theo đúng id

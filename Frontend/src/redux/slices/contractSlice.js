@@ -52,8 +52,10 @@ export const createContract = createAsyncThunk(
   },
 );
 export const updateContract = action("update", "", "put");
-export const cancelContract = action("cancel", "", "delete");
+export const submitContractForApproval = action("submit", "submit");
 export const approveContract = action("approve", "approve");
+export const returnContract = action("return", "return");
+export const rejectContract = action("reject", "reject");
 export const signContract = action("sign", "sign");
 export const payContract = action("payment", "payment");
 export const updateContractSecurity = action(
@@ -64,8 +66,10 @@ export const updateContractSecurity = action(
 const thunks = [
   createContract,
   updateContract,
-  cancelContract,
+  submitContractForApproval,
   approveContract,
+  returnContract,
+  rejectContract,
   signContract,
   payContract,
   updateContractSecurity,
