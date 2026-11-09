@@ -82,6 +82,17 @@ const FEATURES = Object.freeze({
   },
 });
 
+// Inspection operations write supporting records in the same transaction.
+// Keep those database privileges coupled to the corresponding feature action.
+FEATURES.inspections.supportPrivileges = {
+  INSERT: [{ table: "notifications", privilege: "INSERT" }],
+  UPDATE: [
+    { table: "vehicles", privilege: "UPDATE" },
+    { table: "audit_logs", privilege: "INSERT" },
+    { table: "notifications", privilege: "INSERT" },
+  ],
+};
+
 const quoteIdentifier = (value) => {
   if (!/^[a-z_][a-z0-9_]{0,62}$/.test(value))
     throw new ErrorHandler("Tên role PostgreSQL không hợp lệ", 400);

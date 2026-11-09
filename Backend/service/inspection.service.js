@@ -86,8 +86,7 @@ const create = (input, user) =>
      JOIN vehicles v ON v.id=o.vehicle_id
      WHERE c.id=$1 AND o.id=$2 AND v.id=$3
        AND LOWER(o.status)='confirmed'
-       AND LOWER(c.status)='signed'
-     FOR SHARE OF c,o,v`,
+       AND LOWER(c.status)='signed'`,
       [input.contract_id, input.order_id, input.vehicle_id],
     );
     if (!relation.rows[0])
