@@ -85,7 +85,12 @@ BEGIN
     JOIN pg_roles r ON r.rolname = u.db_user
     WHERE u.db_user IS NOT NULL
   LOOP
+    -- Contract INSERT is intentionally granted per column, so
+    -- has_table_privilege(..., 'INSERT') alone reports false after this
+    -- migration has run once. Preserve either a table-level grant or any of
+    -- the managed column grants to keep this migration idempotent.
     SELECT has_table_privilege(account.db_user, 'public.contracts', 'INSERT')
+        OR has_any_column_privilege(account.db_user, 'public.contracts', 'INSERT')
       INTO could_insert;
     EXECUTE format('REVOKE INSERT ON public.contracts FROM %I', account.db_user);
     IF could_insert THEN
